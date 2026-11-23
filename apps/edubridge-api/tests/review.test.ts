@@ -130,6 +130,16 @@ describe('admin review and decision', () => {
     expect((await request(app).get(`/api/review/applications/${appId}`).set('Authorization', student)).status).toBe(403);
   });
 
+  it('never strands an application that was reviewed but not yet assessed', async () => {
+    const { Application } = await import('../src/modules/applications/models');
+    await Application.updateOne({ _id: appId }, { $set: { status: 'VOLUNTEER_REVIEWED' }, $unset: { assessment: 1 } });
+    const q = await request(app).get('/api/review/queue?tab=awaiting').set('Authorization', admin);
+    expect(q.body.items.map((i: { id: string }) => i.id)).toContain(appId);
+    const res = await request(app).post(`/api/review/applications/${appId}/assess`).set('Authorization', admin);
+    expect(res.body.application.status).toBe('ASSESSED');
+    expect(res.body.assessment.ruleBased.score).toBeGreaterThan(0);
+  });
+
   it('keeps working when the ML service is down', async () => {
     predictSpy.mockRejectedValueOnce(new MlError(503, 'down'));
     const res = await request(app).post(`/api/review/applications/${appId}/assess`).set('Authorization', admin);

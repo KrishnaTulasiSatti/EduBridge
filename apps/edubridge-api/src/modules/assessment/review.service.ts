@@ -28,7 +28,10 @@ import { MlError, mlClient, toAppError, type TrainingSample } from './mlClient';
 type Actor = { id: string; role: 'ADMIN' | 'STUDENT' | 'VOLUNTEER' | 'SPONSOR' };
 type Plain = Record<string, unknown>;
 
-const DECIDABLE = ['ASSESSED', 'ON_HOLD'];
+// VOLUNTEER_REVIEWED normally becomes ASSESSED at once; it is included so an application is never stranded
+// if that step did not run (the assessment is then computed when the admin re-runs it or decides).
+const AWAITING = ['VOLUNTEER_REVIEWED', 'ASSESSED'];
+const DECIDABLE = [...AWAITING, 'ON_HOLD'];
 const DECIDED = ['APPROVED', 'REJECTED', 'PARTIALLY_FUNDED', 'FULLY_FUNDED'];
 
 async function findApplication(id: string) {
@@ -59,7 +62,7 @@ function mismatchCount(d: Plain) {
 
 export async function queue(query: unknown) {
   const q = queueQuery.parse(query);
-  const status = q.tab === 'awaiting' ? 'ASSESSED' : q.tab === 'on_hold' ? 'ON_HOLD' : { $in: DECIDED };
+  const status = q.tab === 'awaiting' ? { $in: AWAITING } : q.tab === 'on_hold' ? 'ON_HOLD' : { $in: DECIDED };
   // Awaiting and on hold: highest need first. Decided: most recent first.
   const sort: Record<string, 1 | -1> = q.tab === 'decided' ? { 'decision.at': -1 } : { 'assessment.ruleBased.score': -1, submittedAt: 1 };
 
@@ -95,7 +98,7 @@ export async function queue(query: unknown) {
   );
 
   const [res] = await Application.aggregate(pipeline);
-  const [awaiting, onHold] = await Promise.all([Application.countDocuments({ status: 'ASSESSED' }), Application.countDocuments({ status: 'ON_HOLD' })]);
+  const [awaiting, onHold] = await Promise.all([Application.countDocuments({ status: { $in: AWAITING } }), Application.countDocuments({ status: 'ON_HOLD' })]);
   const items: ReviewQueueItemDTO[] = res.items.map((a: Plain & { student: Plain; docs: Plain[]; assessment?: AssessmentDTO; decision?: Plain; volunteerReview?: Plain; profileSnapshot?: { education?: Plain }; support?: Plain }) => ({
     id: String(a._id),
     applicationNumber: a.applicationNumber as string,
@@ -149,7 +152,7 @@ export async function detail(user: Actor, id: string) {
 
 export async function reassess(user: Actor, id: string, req: Request) {
   const app = await findApplication(id);
-  if (![...DECIDABLE, 'VOLUNTEER_REVIEWED'].includes(app.status)) {
+  if (!DECIDABLE.includes(app.status)) {
     throw AppError.conflict('Only applications waiting for a decision can be re-assessed');
   }
   const assessment = await computeAssessment(app);
