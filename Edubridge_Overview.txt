@@ -1,0 +1,573 @@
+# EDUBRIDGE
+
+---
+
+## What EduBridge actually is:
+
+Imagine a student named Rahul.
+
+- Rahul belongs to a financially struggling family.
+- He wants to continue his engineering education.
+- His family cannot afford his college fees.
+- A person named Priya wants to sponsor deserving students.
+- However, Priya doesn't know which students genuinely need financial support.
+
+There is a problem:
+
+How can Rahul prove his financial situation, and how can Priya confidently find and support him?
+
+That's exactly the problem EduBridge tries to solve.
+
+---
+
+## What does EduBridge do?
+
+EduBridge connects four different types of users:
+
+1. **Student:** Requests financial support for education.
+2. **Volunteer:** Performs preliminary verification of the student's documents and information.
+3. **Admin:** Reviews applications, considers verification and AI assessment results, and makes the final eligibility decision.
+4. **Sponsor:** Discovers eligible students and provides financial support.
+
+The platform manages the entire process, from registration to sponsorship tracking.
+
+---
+
+## What makes EduBridge different?
+
+| Feature | Purpose |
+|---|---|
+| Application management | Students apply for educational support through a structured process. |
+| Document verification | Checks the authenticity and validity of submitted documents using appropriate verification methods. |
+| Volunteer verification | Humans review student information and identify inconsistencies. |
+| AI need assessment | Estimates the student's financial need and generates a recommendation. |
+| Sponsor matching | Recommends suitable eligible students based on sponsor preferences. |
+| Sponsorship management | Manages sponsorship commitments, allocations and records. |
+| Audit and analytics | Tracks important activities and provides platform statistics. |
+
+One important principle:
+
+**AI assists decisions; it does not replace human administrative authority.**
+
+This means AI can analyse information and recommend decisions, but the final eligibility approval belongs to an administrator.
+
+---
+
+## Problem Statement:
+
+### Problems faced by students:
+
+Many students cannot continue their education because of financial difficulties.
+
+For example:
+
+- College fees are too expensive.
+- Parents have low incomes.
+- There are multiple children studying in the same family.
+- Students cannot afford books, accommodation or other educational expenses.
+
+Such students need financial assistance.
+
+### Problems faced by sponsors:
+
+Suppose a sponsor has ₹1,00,000 available for supporting students.
+
+The sponsor faces several questions:
+
+- How do I find students who genuinely need help?
+- How do I know whether their documents are genuine?
+- How much financial support does each student require?
+- Which students should I prioritize?
+- How do I track where my money is allocated?
+
+Without a proper platform, this becomes difficult.
+
+### How EduBridge solves these problems:
+
+EduBridge provides a common platform where:
+
+- Students submit structured applications.
+- Volunteers perform preliminary verification.
+- Administrators review applications and make final eligibility decisions.
+- AI helps assess financial needs.
+- Sponsors discover eligible students through recommendations.
+- Sponsorship commitments and allocations are recorded and tracked.
+- Important activities are maintained through audit logs.
+
+EduBridge solves the trust and coordination problem between students and sponsors.
+
+---
+
+## Workflow:
+
+Student  
+   ↓  
+Registration / Profile  
+   ↓  
+Support Application  
+   ↓  
+Document Submission  
+   ↓  
+Document Verification  
+   ↓  
+Volunteer Review  
+   ↓  
+AI-Based Need Assessment  
+   ↓  
+Admin Review and Final Eligibility Decision  
+   ↓  
+Eligible Student  
+   ↓  
+Sponsor Matching  
+   ↓  
+Sponsorship  
+   ↓  
+Sponsorship Tracking / Audit
+
+**Important:** AI need assessment provides a recommendation. The administrator considers the verification results and AI recommendation before making the final eligibility decision.
+
+---
+
+## Four User Roles:
+
+Your application has four major roles.
+
+| Role | What the user does |
+|---|---|
+| Student | Registers, submits applications and requests educational support. |
+| Volunteer | Performs preliminary verification of documents and student information. |
+| Admin | Reviews applications, manages verification and makes final eligibility decisions. |
+| Sponsor | Discovers eligible students, provides financial support and tracks sponsorships. |
+
+---
+
+## Goals:
+
+Your project has eight main goals.
+
+1. **Structure educational support applications:** Provide a standard application process instead of collecting information randomly.
+2. **Improve trust through verification:** Check submitted documents and application information using official, institutional or manual verification methods.
+3. **Reduce manual effort using AI:** Automate document processing where appropriate and assist need assessment.
+4. **Help sponsors discover students:** Recommend eligible students according to sponsor preferences.
+5. **Make sponsorship traceable:** Record sponsorship commitments, allocations and remaining requirements.
+6. **Maintain audit trails:** Keep records of important activities performed by students, volunteers, administrators and sponsors.
+7. **Protect student information:** Prevent unauthorized access to private information through secure storage, consent and role-based access control.
+8. **Provide modular architecture:** Divide the project into independent, manageable modules.
+
+---
+
+## Non-Goals:
+
+| Non-goal | Simple explanation |
+|---|---|
+| AI automatically deciding funding | Humans must make final administrative decisions. |
+| OCR proving authenticity | OCR only extracts text; it cannot prove that a document is genuine. |
+| Replacing human verification | Volunteers and administrators remain important. |
+| Depending entirely on DigiLocker | The system must work even without production DigiLocker API access. |
+| Building unnecessary DL models | Use simpler solutions when sufficient. |
+| Exposing private information | Student privacy must be protected. |
+| Starting with microservices | Begin with a simpler modular architecture. |
+| Building payment infrastructure early | First stabilize sponsorship business logic and transaction records. |
+| Making Aadhaar mandatory | Students should have alternative identity-verification methods. |
+
+---
+
+## Tech Stack: MERN
+
+**Frontend:**
+- React.js
+- TypeScript
+- Tailwind CSS
+- React Router
+
+**Backend:**
+- Node.js
+- Express.js
+- TypeScript
+- Mongoose
+
+**Database:**
+- MongoDB Atlas
+
+**Authentication and Security:**
+- JWT Authentication
+- Refresh Tokens
+- bcrypt / Argon2
+- Role-Based Access Control (RBAC)
+- Zod Validation
+
+**Document Storage:**
+- AWS S3 or equivalent private object storage.
+- Local storage for initial development and testing.
+
+**Document Verification:**
+- Official verification portals wherever available.
+- QR-code and digital-signature verification where supported.
+- Institution-based verification.
+- Manual volunteer and administrator verification.
+
+**Testing:**
+- Vitest / Jest
+- Supertest
+- Playwright
+- Postman
+
+---
+
+## ML Algorithms:
+
+ML algorithms will mainly be used for student need assessment.
+
+| Algorithm | Use in EduBridge | Recommendation |
+|---|---|---|
+| Logistic Regression | Need classification | Baseline model |
+| Decision Tree | Need classification | Explainable model |
+| Random Forest | Need classification | Strong candidate |
+| XGBoost | Need classification | Advanced comparison |
+| SVM | Need classification | Optional comparison |
+| Linear Regression | Support-gap prediction | Only if reliable numerical training labels exist |
+
+### How ML will be used:
+
+The system considers relevant information such as:
+
+- Annual family income.
+- Number of family members.
+- Number of earning members.
+- Annual educational expenses.
+- Existing financial assistance.
+- Requested financial support.
+- Other relevant financial circumstances.
+
+The model generates a financial-need score or priority recommendation.
+
+For example:
+
+- High financial need.
+- Medium financial need.
+- Low financial need.
+
+### Recommended ML implementation:
+
+1. Start with a rule-based need assessment.
+2. Collect reliable and appropriately consented historical application data.
+3. Establish clear target labels through reviewed administrative decisions.
+4. Train and compare Logistic Regression, Decision Tree and Random Forest.
+5. Evaluate the models using Precision, Recall, F1-score and Confusion Matrix.
+6. Introduce XGBoost only if it provides meaningful improvement.
+7. Display the assessment result and relevant factors to the administrator.
+
+**Important:** Do not train a model using randomly generated data and present its predictions as genuine financial-need assessments. ML recommendations must be evaluated for accuracy, fairness and bias.
+
+---
+
+## Documents Verification:
+
+The main documents required from students are:
+
+1. Income Certificate.
+2. College ID Card.
+3. Latest Academic Marksheet.
+
+
+### Application 1:
+
+**EduBridge**
+
+The main platform where students apply for educational sponsorship.
+
+### Application 2:
+
+**EduVault — Your simulated DigiLocker**
+
+A separate application that stores sample academic documents and allows students to access and share them with EduBridge after providing consent.
+
+EduVault is a DigiLocker-inspired testing environment developed specifically for the EduBridge project. It is not an official DigiLocker service.
+
+### EduVault Roles:
+
+| Role | Responsibility |
+|---|---|
+| Student | Accesses and shares academic documents. |
+| College / Issuer | Uploads and issues academic marksheets. |
+| EduBridge | Requests and verifies academic documents. |
+| EduVault Admin | Manages institutions, students and test records. |
+
+### EduVault Workflow:
+
+**1. College creates an account**
+
+The college registers as an issuer and gets an institution account.
+
+**2. College uploads academic records**
+
+It uploads sample marksheets with:
+
+- Student name.
+- Roll number.
+- University name.
+- Semester.
+- Academic year.
+- Marks.
+- Result.
+
+**3. College issues the marksheet**
+
+EduVault generates a document hash using SHA-256 and creates a digital signature using the college's registered private key.
+
+The document, signature and issuer information are stored securely.
+
+**4. Student accesses EduVault**
+
+The student logs in and sees the academic marksheets issued by their college.
+
+**5. Student applies for sponsorship on EduBridge**
+
+They select "Verify using EduVault".
+
+**6. EduBridge requests document access**
+
+EduVault displays a consent screen showing which marksheet EduBridge wants to access and why it needs the document.
+
+**7. Student grants permission**
+
+EduVault generates a temporary, one-time document-sharing reference.
+
+**8. EduBridge retrieves the marksheet**
+
+Its backend requests the document from EduVault and validates the digital signature using the registered college's public key.
+
+**9. Verification result is saved**
+
+EduBridge records the issuer, document ID, signature verification result, consent reference and timestamp.
+
+### Important points:
+
+- A valid digital signature confirms document integrity and that it was signed using the registered issuer's private key.
+- It does not independently prove that the original marks entered by an issuer are truthful.
+- Only registered and trusted institutions should be allowed to issue documents.
+- Test marksheets and student records must be fictional and clearly labelled as test data.
+- EduVault is intended for academic marksheet verification. Other student documents require separate verification methods.
+
+---
+
+## Other Document Verification Methods:
+
+### 1. Income Certificate Verification
+
+The student uploads the income certificate and provides the certificate/application number.
+
+Verification process:
+
+1. Student uploads the income certificate.
+2. Student enters the certificate or application number.
+3. Volunteer or administrator opens the official Andhra Pradesh MeeSeva verification facility.
+4. The certificate details are checked against the official portal.
+5. The administrator compares the details with the student's application.
+6. The verification result is recorded.
+
+Official portal:
+
+https://onlineap.meeseva.gov.in/CitizenPortal/UserInterface/Citizen/Home.aspx
+
+If an authorised government verification API becomes available, it can be integrated later.
+
+### 2. College ID Verification
+
+Verification process:
+
+1. Student uploads the college ID card.
+2. Student enters the college name, university name and roll number.
+3. EduBridge checks whether the institution is registered.
+4. The volunteer or administrator contacts the college or uses its official verification facility.
+5. The college confirms the student's current enrolment.
+6. The verification result is recorded.
+
+**Future enhancement:** Colleges can register directly on EduBridge and maintain their student enrolment records, making verification faster.
+
+---
+
+## Document Verification Statuses:
+
+| Status | Meaning |
+|---|---|
+| PENDING | Document has been uploaded and is awaiting verification. |
+| PROCESSING | Verification is currently in progress. |
+| VERIFIED | Document authenticity has been successfully confirmed. |
+| REVIEW_REQUIRED | Document requires additional human verification. |
+| REJECTED | Document has been confirmed invalid or does not meet requirements. |
+| SERVICE_UNAVAILABLE | Verification service is temporarily unavailable. |
+
+A failed API request or unavailable verification portal should not automatically result in document rejection.
+
+---
+
+## Sponsor Matching:
+
+After an application receives final administrative eligibility approval, the student becomes available for sponsor matching.
+
+The system considers:
+
+- Sponsor's available budget.
+- Preferred education level.
+- Preferred support category.
+- Student's financial-need priority.
+- Requested financial assistance.
+- Remaining financial requirement.
+
+### Recommended approach:
+
+Start with rule-based filtering and weighted scoring.
+
+Example:
+
+| Matching factor | Weight |
+|---|---:|
+| Education level match | 30% |
+| Support category match | 30% |
+| Budget compatibility | 25% |
+| Sponsor preferences | 15% |
+
+Match Score = (0.30 × Education Match) + (0.30 × Category Match) + (0.25 × Budget Match) + (0.15 × Preference Match)
+
+The system recommends suitable students to sponsors.
+
+The sponsor can then review the permitted student profile and choose whom to support.
+
+Private student information must never be exposed merely because the matching algorithm uses it internally.
+
+---
+
+## Sponsorship Management:
+
+Once a sponsor selects a student:
+
+1. Sponsor selects the student and support amount.
+2. System checks the remaining financial requirement.
+3. Sponsorship record is created.
+4. Student and sponsor can view the sponsorship status.
+5. Admin can monitor the sponsorship.
+6. Every sponsorship activity is recorded in the audit logs.
+
+The system must prevent duplicate or excessive sponsorship allocations.
+
+**Important business rule:**
+
+Total confirmed sponsorship amount must not exceed the student's approved financial requirement.
+
+Actual payment gateway integration and fund disbursement infrastructure can be introduced in a later phase.
+
+---
+
+## Audit and Analytics:
+
+The admin dashboard should provide:
+
+- Total registered students.
+- Total applications submitted.
+- Applications awaiting verification.
+- Documents awaiting review.
+- Applications approved and rejected.
+- Students eligible for sponsorship.
+- Total sponsorship commitments.
+- Remaining sponsorship requirements.
+- Volunteer verification activity.
+- Important administrative activities.
+
+Every important action should be recorded with:
+
+- User ID.
+- Action performed.
+- Resource affected.
+- Date and timestamp.
+- Relevant metadata.
+
+This improves transparency and accountability.
+
+---
+
+## Security and Privacy:
+
+EduBridge handles sensitive student and financial information. Therefore, security is an important requirement.
+
+The platform should implement:
+
+1. Secure password hashing.
+2. JWT-based authentication.
+3. Role-Based Access Control.
+4. Secure document storage.
+5. Student consent before sharing documents.
+6. Restricted access to private student information.
+7. Audit logging.
+8. Secure API communication using HTTPS.
+9. Document access controls and temporary sharing references.
+10. Appropriate document retention and deletion policies.
+
+Sensitive information such as Aadhaar numbers, bank details and private financial records must not be unnecessarily exposed or stored.
+
+---
+
+## Final Project Architecture:
+
+EduBridge follows a MERN-based modular architecture.
+
+**Application 1: EduBridge**
+
+Handles:
+
+- Student registration and profile.
+- Application management.
+- Document verification workflow.
+- Volunteer verification.
+- AI need assessment.
+- Admin approval.
+- Sponsor matching.
+- Sponsorship management.
+- Audit and analytics.
+
+**Application 2: EduVault**
+
+Handles:
+
+- College registration.
+- Student document storage.
+- Academic marksheet issuance.
+- Digital signatures.
+- Student consent.
+- Secure document sharing.
+- Document signature verification.
+
+Both applications communicate through secure REST APIs.
+
+---
+
+## Development Priority:
+
+The project should be implemented in the following order:
+
+1. Authentication and Role Management.
+2. Student Profile and Application Management.
+3. Document Upload and Secure Storage.
+4. EduVault Institution and Student Management.
+5. EduVault Academic Document Issuance and Digital Signatures.
+6. EduVault Consent and Document Sharing.
+7. Income Certificate and College ID Verification.
+8. Aadhaar Optional Verification.
+9. Volunteer Verification Dashboard.
+10. Admin Review and Eligibility Management.
+11. Rule-Based Need Assessment.
+12. ML-Based Need Assessment.
+13. Sponsor Matching.
+14. Sponsorship Management.
+15. Audit and Analytics.
+16. Testing and Security Improvements.
+
+---
+
+## Final Definition of EduBridge:
+
+EduBridge is an AI-assisted educational sponsorship platform that connects financially struggling students with sponsors through structured applications, document verification, human review, intelligent need assessment and transparent sponsorship management.
+
+**Core principle:**
+
+Trust through verification, fairness through assessment, transparency through tracking and human authority through final administrative decisions.

@@ -1,0 +1,356 @@
+import { ArrowRight, Check, FileCheck2, Lock, ScrollText, UserRoundCheck } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
+import { Logo } from '@/components/brand/Logo';
+import { BridgeArt } from '@/components/landing/BridgeArt';
+import { Navbar } from '@/components/landing/Navbar';
+import { buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+
+function Section({ id, className, children }: { id?: string; className?: string; children: ReactNode }) {
+  return (
+    <section id={id} className={cn('scroll-mt-16 px-5 py-20 sm:px-8 lg:py-28', className)}>
+      <div className="mx-auto max-w-6xl">{children}</div>
+    </section>
+  );
+}
+
+function Heading({ eyebrow, title, text, className }: { eyebrow?: string; title: string; text?: string; className?: string }) {
+  return (
+    <div className={cn('max-w-2xl', className)}>
+      {eyebrow && <p className="text-sm font-medium text-primary-ink">{eyebrow}</p>}
+      <h2 className="mt-2 font-display text-[34px] font-medium leading-[1.15] text-balance sm:text-[40px]">{title}</h2>
+      {text && <p className="mt-4 text-[17px] leading-relaxed text-muted-foreground text-pretty">{text}</p>}
+    </div>
+  );
+}
+
+const steps = [
+  { title: 'Apply', text: 'Students fill in one structured application covering their studies, family and finances.' },
+  { title: 'Submit documents', text: 'A marksheet, an income certificate and a college ID card, each checked by the most reliable method available.' },
+  { title: 'Volunteer review', text: 'A trained volunteer compares the documents with the application and notes anything that does not match.' },
+  { title: 'Need assessment', text: 'A transparent scoring model estimates financial need and shows the factors behind the estimate.' },
+  { title: 'Administrator decision', text: 'An administrator looks at everything together and decides on eligibility, recording the reason.' },
+  { title: 'Sponsorship', text: 'Approved students are shown to sponsors whose preferences match. Every contribution is recorded.' },
+];
+
+const verification = [
+  {
+    doc: 'Academic marksheet',
+    how: 'Digitally signed record fetched from the issuing institution through EduVault, after the student gives consent.',
+    who: 'Automatic signature check',
+  },
+  {
+    doc: 'Income certificate',
+    how: 'Certificate looked up on the official AP Seva portal and checked against the application.',
+    who: 'Volunteer, confirmed by an administrator',
+  },
+  {
+    doc: 'College ID card',
+    how: 'Current enrolment confirmed with the institution.',
+    who: 'Volunteer, confirmed by an administrator',
+  },
+];
+
+const principles = [
+  {
+    icon: UserRoundCheck,
+    title: 'People make the decisions',
+    text: 'The assessment model helps estimate need. Only an administrator can approve a student, and they must record why.',
+  },
+  {
+    icon: Lock,
+    title: 'Private by default',
+    text: 'Sponsors see an anonymised profile. Names, contact details and documents are never shown to them.',
+  },
+  {
+    icon: FileCheck2,
+    title: 'Consent before sharing',
+    text: 'Documents are fetched from EduVault only after the student approves the specific request.',
+  },
+  {
+    icon: ScrollText,
+    title: 'Nothing goes unrecorded',
+    text: 'Applications, verifications, decisions and sponsorships are kept in a permanent audit trail.',
+  },
+];
+
+const faqs = [
+  {
+    q: 'Does it cost anything to apply?',
+    a: 'No. Applying is free, and no one at EduBridge will ever ask a student for money to process an application.',
+  },
+  {
+    q: 'Who can apply?',
+    a: 'Students enrolled in a diploma, undergraduate, postgraduate or doctoral programme who need financial support to continue their studies.',
+  },
+  {
+    q: 'Is Aadhaar mandatory?',
+    a: 'No. Aadhaar is optional. Identity and enrolment can be confirmed through other documents and through your institution.',
+  },
+  {
+    q: 'What can sponsors see about me?',
+    a: 'Sponsors see your course, year, state, the kind of support you need and how much of it is still unfunded. They do not see your name, contact details or documents.',
+  },
+  {
+    q: 'How is financial need assessed?',
+    a: 'Factors such as income per family member, the number of earning members, education costs and existing scholarships are combined into a score. The score is a recommendation; an administrator makes the decision.',
+  },
+  {
+    q: 'As a sponsor, how do I know where my money goes?',
+    a: 'Each sponsorship is recorded against a specific student and amount. A student can never receive more than their approved requirement, and your dashboard shows every allocation.',
+  },
+];
+
+export default function LandingPage() {
+  return (
+    <div className="min-h-dvh">
+      <Navbar />
+      <main>
+        {/* Hero */}
+        <section className="px-5 pb-16 pt-14 sm:px-8 lg:pb-24 lg:pt-20">
+          <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
+            <div>
+              <p className="text-sm font-medium text-primary-ink">Educational sponsorship, handled with care</p>
+              <h1 className="mt-4 font-display text-[42px] font-medium leading-[1.08] text-balance sm:text-[54px] lg:text-[60px]">
+                Helping deserving students continue their education.
+              </h1>
+              <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground text-pretty">
+                EduBridge connects students facing financial hardship with people who want to help. Every application is verified,
+                reviewed by people, and every contribution is recorded.
+              </p>
+              <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+                <Link to="/register?role=STUDENT" className={buttonVariants({ size: 'lg' })}>
+                  Apply for support
+                </Link>
+                <Link to="/register?role=SPONSOR" className={buttonVariants({ size: 'lg', variant: 'secondary' })}>
+                  Become a sponsor
+                </Link>
+              </div>
+              <p className="mt-5 text-sm text-subtle">Free for students. Aadhaar is optional.</p>
+            </div>
+            <div className="hidden sm:block">
+              <BridgeArt className="mx-auto w-full max-w-[480px]" />
+            </div>
+          </div>
+        </section>
+
+        {/* Pillars */}
+        <section className="border-y border-border bg-surface px-5 sm:px-8">
+          <div className="mx-auto grid max-w-6xl divide-y divide-border md:grid-cols-3 md:divide-x md:divide-y-0">
+            {[
+              ['Checked at the source', 'Documents are verified with issuing institutions and official portals, not taken at face value.'],
+              ['Decided by people', 'Volunteers review every application and an administrator makes each final decision.'],
+              ['Accounted for', 'Funding never exceeds a student’s approved need, and every allocation is traceable.'],
+            ].map(([t, d]) => (
+              <div key={t} className="py-8 md:px-8 md:first:pl-0 md:last:pr-0">
+                <p className="font-display text-xl font-medium">{t}</p>
+                <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">{d}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* How it works */}
+        <Section id="how-it-works">
+          <Heading
+            eyebrow="How it works"
+            title="From application to sponsorship, one clear path"
+            text="Students can follow their application at every stage. Nothing moves forward without a person looking at it."
+          />
+          <ol className="mt-14 grid gap-x-12 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+            {steps.map((s, i) => (
+              <li key={s.title} className="border-t border-border-strong pt-5">
+                <span className="font-display text-[15px] text-subtle">{String(i + 1).padStart(2, '0')}</span>
+                <h3 className="mt-2 text-[17px] font-semibold">{s.title}</h3>
+                <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">{s.text}</p>
+              </li>
+            ))}
+          </ol>
+        </Section>
+
+        {/* Students & sponsors */}
+        <section className="px-5 pb-20 sm:px-8 lg:pb-28">
+          <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-2">
+            <div id="students" className="scroll-mt-20 rounded-2xl border border-border bg-surface p-8 sm:p-10">
+              <p className="text-sm font-medium text-primary-ink">For students</p>
+              <h3 className="mt-2 font-display text-[28px] font-medium leading-tight">Ask for help, with dignity</h3>
+              <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
+                One application, reviewed fairly. You can see where it stands at any time, and your personal details are never shared
+                with sponsors.
+              </p>
+              <p className="mt-7 text-sm font-semibold">Keep these ready</p>
+              <ul className="mt-3 space-y-2.5">
+                {['Your latest marksheet', 'Income certificate and its certificate number', 'College ID card and your roll number'].map((t) => (
+                  <li key={t} className="flex gap-2.5 text-[15px] text-muted-foreground">
+                    <Check className="mt-1 size-4 shrink-0 text-primary" /> {t}
+                  </li>
+                ))}
+              </ul>
+              <Link to="/register?role=STUDENT" className={cn(buttonVariants(), 'mt-8')}>
+                Start an application
+              </Link>
+            </div>
+
+            <div id="sponsors" className="scroll-mt-20 rounded-2xl border border-border bg-surface p-8 sm:p-10">
+              <p className="text-sm font-medium text-primary-ink">For sponsors</p>
+              <h3 className="mt-2 font-display text-[28px] font-medium leading-tight">Give with confidence</h3>
+              <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
+                Support students whose documents have been verified and whose need has been reviewed, and see exactly where your
+                contribution goes.
+              </p>
+              <p className="mt-7 text-sm font-semibold">What you can do</p>
+              <ul className="mt-3 space-y-2.5">
+                {[
+                  'Choose by level of study and type of support',
+                  'Fund a student’s full need or part of it',
+                  'Follow every allocation from your dashboard',
+                ].map((t) => (
+                  <li key={t} className="flex gap-2.5 text-[15px] text-muted-foreground">
+                    <Check className="mt-1 size-4 shrink-0 text-primary" /> {t}
+                  </li>
+                ))}
+              </ul>
+              <Link to="/register?role=SPONSOR" className={cn(buttonVariants({ variant: 'secondary' }), 'mt-8')}>
+                Become a sponsor
+              </Link>
+            </div>
+          </div>
+          <p className="mx-auto mt-8 max-w-6xl text-[15px] text-muted-foreground">
+            Want to help verify applications?{' '}
+            <Link to="/register?role=VOLUNTEER" className="inline-flex items-center gap-1 font-medium text-primary-ink hover:underline">
+              Volunteer with EduBridge <ArrowRight className="size-4" />
+            </Link>
+          </p>
+        </section>
+
+        {/* Verification */}
+        <Section id="verification" className="border-y border-border bg-surface">
+          <Heading
+            eyebrow="Verification"
+            title="How documents are verified"
+            text="Each document is checked using the most reliable method available for it."
+          />
+          <div className="mt-12 overflow-hidden rounded-xl border border-border">
+            <table className="w-full text-left text-[15px]">
+              <thead className="hidden bg-sunken text-sm text-muted-foreground md:table-header-group">
+                <tr>
+                  <th className="px-6 py-3.5 font-medium">Document</th>
+                  <th className="px-6 py-3.5 font-medium">How it is checked</th>
+                  <th className="px-6 py-3.5 font-medium">Checked by</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {verification.map((v) => (
+                  <tr key={v.doc} className="block px-6 py-5 md:table-row md:p-0">
+                    <td className="block font-semibold md:table-cell md:w-[22%] md:px-6 md:py-5 md:align-top">{v.doc}</td>
+                    <td className="mt-1 block leading-relaxed text-muted-foreground md:table-cell md:px-6 md:py-5 md:align-top">{v.how}</td>
+                    <td className="mt-2 block text-sm text-muted-foreground md:table-cell md:w-[26%] md:px-6 md:py-5 md:align-top md:text-[15px]">
+                      {v.who}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-6 max-w-3xl text-[15px] leading-relaxed text-muted-foreground">
+            If an official service is temporarily unavailable, the document waits for a person to review it. A document is never
+            rejected automatically because a website was down.
+          </p>
+        </Section>
+
+        {/* Principles */}
+        <Section>
+          <Heading eyebrow="Our principles" title="Trust is built in, not added on" />
+          <div className="mt-12 grid gap-x-12 gap-y-10 md:grid-cols-2">
+            {principles.map((p) => (
+              <div key={p.title} className="flex gap-4">
+                <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-primary-soft text-primary-ink">
+                  <p.icon className="size-5" />
+                </span>
+                <div>
+                  <h3 className="text-[17px] font-semibold">{p.title}</h3>
+                  <p className="mt-1.5 text-[15px] leading-relaxed text-muted-foreground">{p.text}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Section>
+
+        {/* FAQ */}
+        <Section id="faq" className="pt-0 lg:pt-0">
+          <div className="grid gap-10 lg:grid-cols-[1fr_1.6fr] lg:gap-16">
+            <Heading eyebrow="Questions" title="Frequently asked questions" />
+            <div className="divide-y divide-border border-y border-border">
+              {faqs.map((f) => (
+                <details key={f.q} className="group py-1">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-4 text-[16px] font-medium">
+                    {f.q}
+                    <span className="relative size-4 shrink-0 text-muted-foreground" aria-hidden>
+                      <span className="absolute left-0 top-1/2 h-px w-4 bg-current" />
+                      <span className="absolute left-1/2 top-0 h-4 w-px bg-current transition-transform group-open:scale-y-0" />
+                    </span>
+                  </summary>
+                  <p className="pb-5 pr-10 text-[15px] leading-relaxed text-muted-foreground">{f.a}</p>
+                </details>
+              ))}
+            </div>
+          </div>
+        </Section>
+
+        {/* Closing */}
+        <section className="px-5 pb-20 sm:px-8 lg:pb-28">
+          <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-8 rounded-2xl bg-[#2f5d50] px-8 py-12 text-[#f7f6f2] sm:px-12 lg:flex-row lg:items-center">
+            <div>
+              <h2 className="font-display text-[32px] font-medium leading-tight">Ready to begin?</h2>
+              <p className="mt-2 text-[17px] text-[#f7f6f2]/75">It takes a couple of minutes to create an account.</p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Link to="/register?role=STUDENT" className={cn(buttonVariants({ size: 'lg' }), 'bg-[#f7f6f2] text-[#234a3f] hover:bg-white')}>
+                Apply for support
+              </Link>
+              <Link
+                to="/register?role=SPONSOR"
+                className={cn(buttonVariants({ size: 'lg' }), 'border border-[#f7f6f2]/35 bg-transparent text-[#f7f6f2] hover:bg-white/10')}
+              >
+                Become a sponsor
+              </Link>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="border-t border-border px-5 sm:px-8">
+        <div className="mx-auto grid max-w-6xl gap-10 py-14 md:grid-cols-[1.6fr_1fr_1fr]">
+          <div>
+            <Logo />
+            <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted-foreground">
+              An educational sponsorship platform built on verification, fair assessment and transparent tracking.
+            </p>
+          </div>
+          <div>
+            <p className="text-sm font-semibold">Platform</p>
+            <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
+              <li><a href="#how-it-works" className="hover:text-foreground">How it works</a></li>
+              <li><a href="#students" className="hover:text-foreground">For students</a></li>
+              <li><a href="#sponsors" className="hover:text-foreground">For sponsors</a></li>
+              <li><Link to="/register?role=VOLUNTEER" className="hover:text-foreground">Volunteer</Link></li>
+            </ul>
+          </div>
+          <div>
+            <p className="text-sm font-semibold">Trust</p>
+            <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
+              <li><a href="#verification" className="hover:text-foreground">Verification</a></li>
+              <li><a href="#faq" className="hover:text-foreground">FAQ</a></li>
+              <li><Link to="/login" className="hover:text-foreground">Sign in</Link></li>
+            </ul>
+          </div>
+        </div>
+        <div className="mx-auto flex max-w-6xl flex-col gap-2 border-t border-border py-6 text-[13px] text-subtle sm:flex-row sm:justify-between">
+          <p>© {new Date().getFullYear()} EduBridge</p>
+          <p>EduVault is a simulated document service and is not affiliated with DigiLocker.</p>
+        </div>
+      </footer>
+    </div>
+  );
+}

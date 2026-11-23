@@ -1,0 +1,158 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * EduBridge design tokens — calm, warm and quiet.
+ * Paper-white surfaces, ink text, a single pine-green accent, thin borders, no gradients.
+ */
+:root {
+  --background: #f7f6f2;
+  --surface: #ffffff;
+  --surface-sunken: #f1efe9;
+  --foreground: #1d211f;
+  --muted-foreground: #646a66;
+  --subtle-foreground: #8b908c;
+  --border: #e5e2da;
+  --border-strong: #d6d2c8;
+
+  --primary: #2f5d50;
+  --primary-hover: #284f44;
+  --primary-foreground: #ffffff;
+  --primary-soft: #e8efeb;
+  --primary-ink: #234a3f;
+
+  --success: #3f7a55;
+  --success-soft: #e6f0e9;
+  --warning: #9a6a1f;
+  --warning-soft: #f6eedf;
+  --danger: #a5402d;
+  --danger-soft: #f7e7e3;
+  --info: #3d5f8a;
+  --info-soft: #e7edf5;
+
+  --ring: #2f5d50;
+}
+
+.dark {
+  --background: #141615;
+  --surface: #1b1e1c;
+  --surface-sunken: #171a18;
+  --foreground: #e9e8e3;
+  --muted-foreground: #a2a7a3;
+  --subtle-foreground: #7d827e;
+  --border: #2a2e2c;
+  --border-strong: #3a3f3c;
+
+  --primary: #8fbcab;
+  --primary-hover: #a3cabb;
+  --primary-foreground: #102019;
+  --primary-soft: #203029;
+  --primary-ink: #a9d0c1;
+
+  --success: #8cc09c;
+  --success-soft: #1e2f24;
+  --warning: #d9b071;
+  --warning-soft: #33291a;
+  --danger: #e09584;
+  --danger-soft: #3a221d;
+  --info: #9db7d8;
+  --info-soft: #1e2733;
+
+  --ring: #8fbcab;
+}
+
+@theme inline {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-serif: 'Source Serif 4', ui-serif, Georgia, 'Times New Roman', serif;
+
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-sunken: var(--surface-sunken);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-subtle: var(--subtle-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-ink: var(--primary-ink);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-ring: var(--ring);
+
+  --shadow-card: 0 1px 2px rgb(29 33 31 / 0.04);
+  --shadow-pop: 0 8px 24px -8px rgb(29 33 31 / 0.16), 0 2px 6px rgb(29 33 31 / 0.06);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: 'cv11', 'ss01';
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--primary) 18%, transparent);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+}
+
+@utility font-display {
+  font-family: var(--font-serif);
+  font-optical-sizing: auto;
+  letter-spacing: -0.015em;
+}
+
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+@utility animate-fade-in {
+  animation: fade-in 0.25s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

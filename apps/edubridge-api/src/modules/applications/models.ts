@@ -1,0 +1,187 @@
+import { Schema, Types, model, type InferSchemaType, type HydratedDocument } from 'mongoose';
+import {
+  APPLICATION_STATUSES,
+  DOCUMENT_STATUSES,
+  DOCUMENT_TYPES,
+  EDUCATION_LEVELS,
+  GENDERS,
+  INDIAN_STATES,
+  RECOMMENDATIONS,
+  SPECIAL_CIRCUMSTANCES,
+} from '@edubridge/shared';
+
+/* ------------------------------------------------------------ Profile */
+
+const personalSchema = new Schema(
+  {
+    dateOfBirth: String,
+    gender: { type: String, enum: GENDERS },
+    addressLine: String,
+    city: String,
+    district: String,
+    state: { type: String, enum: INDIAN_STATES },
+    pincode: String,
+  },
+  { _id: false },
+);
+
+const educationSchema = new Schema(
+  {
+    institutionName: String,
+    university: String,
+    level: { type: String, enum: EDUCATION_LEVELS },
+    course: String,
+    specialization: String,
+    currentYear: Number,
+    durationYears: Number,
+    rollNumber: String,
+    lastExamPercentage: Number,
+  },
+  { _id: false },
+);
+
+const studentProfileSchema = new Schema(
+  {
+    user: { type: Types.ObjectId, ref: 'User', required: true, unique: true },
+    personal: { type: personalSchema, default: () => ({}) },
+    education: { type: educationSchema, default: () => ({}) },
+  },
+  { timestamps: true },
+);
+export const StudentProfile = model('StudentProfile', studentProfileSchema);
+export type StudentProfileDoc = HydratedDocument<InferSchemaType<typeof studentProfileSchema>>;
+
+/* -------------------------------------------------------- Application */
+
+const familySchema = new Schema(
+  {
+    familyMembers: Number,
+    earningMembers: Number,
+    dependentsStudying: Number,
+    annualFamilyIncome: Number,
+    primaryEarnerOccupation: String,
+    circumstances: { type: [{ type: String, enum: SPECIAL_CIRCUMSTANCES }], default: undefined },
+    circumstancesNote: String,
+  },
+  { _id: false },
+);
+
+const supportSchema = new Schema(
+  {
+    expenses: {
+      type: new Schema(
+        { tuition: Number, hostel: Number, books: Number, exam: Number, transport: Number, other: Number },
+        { _id: false },
+      ),
+      default: undefined,
+    },
+    existingAid: Number,
+    existingAidSource: String,
+    requestedAmount: Number,
+    statement: String,
+  },
+  { _id: false },
+);
+
+const statusEventSchema = new Schema(
+  {
+    status: { type: String, enum: APPLICATION_STATUSES, required: true },
+    at: { type: Date, required: true, default: Date.now },
+    by: { type: Types.ObjectId, ref: 'User' },
+    note: String,
+  },
+  { _id: false },
+);
+
+const applicationSchema = new Schema(
+  {
+    student: { type: Types.ObjectId, ref: 'User', required: true, index: true },
+    applicationNumber: { type: String, required: true, unique: true },
+    academicYear: { type: String, required: true },
+    status: { type: String, enum: APPLICATION_STATUSES, default: 'DRAFT', index: true },
+    family: { type: familySchema, default: () => ({}) },
+    support: { type: supportSchema, default: () => ({}) },
+    /** Immutable copy of the profile at submission, so later profile edits don't alter a submitted application. */
+    profileSnapshot: {
+      type: new Schema({ personal: personalSchema, education: educationSchema }, { _id: false }),
+      default: undefined,
+    },
+    declarationAcceptedAt: Date,
+    submittedAt: Date,
+    history: { type: [statusEventSchema], default: [] },
+    /** The volunteer (or admin) currently carrying out preliminary verification. */
+    assignment: {
+      type: new Schema(
+        { volunteer: { type: Types.ObjectId, ref: 'User', required: true }, claimedAt: { type: Date, required: true } },
+        { _id: false },
+      ),
+      default: undefined,
+    },
+    /** Preliminary recommendation handed to the administrator. */
+    volunteerReview: {
+      type: new Schema(
+        {
+          recommendation: { type: String, enum: RECOMMENDATIONS, required: true },
+          summary: { type: String, required: true },
+          by: { type: Types.ObjectId, ref: 'User', required: true },
+          byRole: String,
+          at: { type: Date, required: true },
+        },
+        { _id: false },
+      ),
+      default: undefined,
+    },
+  },
+  { timestamps: true },
+);
+// One application per student per academic year.
+applicationSchema.index({ student: 1, academicYear: 1 }, { unique: true });
+applicationSchema.index({ status: 1, submittedAt: -1 });
+applicationSchema.index({ 'assignment.volunteer': 1, status: 1 });
+applicationSchema.index({ 'volunteerReview.by': 1 });
+
+export const Application = model('Application', applicationSchema);
+export type ApplicationDoc = HydratedDocument<InferSchemaType<typeof applicationSchema>>;
+
+/* ----------------------------------------------------------- Document */
+
+const documentSchema = new Schema(
+  {
+    application: { type: Types.ObjectId, ref: 'Application', required: true, index: true },
+    owner: { type: Types.ObjectId, ref: 'User', required: true, index: true },
+    type: { type: String, enum: DOCUMENT_TYPES, required: true },
+    status: { type: String, enum: DOCUMENT_STATUSES, default: 'PENDING' },
+    source: { type: String, enum: ['UPLOAD', 'EDUVAULT'], default: 'UPLOAD' },
+    storageKey: { type: String, required: true, select: false },
+    originalName: { type: String, required: true },
+    mimeType: { type: String, required: true },
+    size: { type: Number, required: true },
+    sha256: { type: String, required: true },
+    certificateNumber: String,
+    rollNumber: String,
+    /** Income certificate: the student's Aadhaar, AES-256-GCM encrypted, for looking it up on AP Seva. Never selected by default. */
+    aadhaarEncrypted: { type: String, select: false },
+    aadhaarLast4: String,
+    /** Latest manual check by a volunteer or admin (DocumentReviewDTO). Earlier checks remain in the audit log. */
+    review: { type: Schema.Types.Mixed },
+    /** College ID: automatic enrolment check against EduVault (EnrolmentCheckDTO). */
+    enrolmentCheck: { type: Schema.Types.Mixed },
+    /** Signature check result for documents imported from EduVault (DocumentVerificationDTO). */
+    verification: { type: Schema.Types.Mixed },
+  },
+  { timestamps: true },
+);
+documentSchema.index({ application: 1, type: 1 }, { unique: true });
+
+export const StudentDocument = model('StudentDocument', documentSchema);
+export type StudentDocumentDoc = HydratedDocument<InferSchemaType<typeof documentSchema>>;
+
+/* ------------------------------------------------------------ Counter */
+
+const counterSchema = new Schema({ _id: String, seq: { type: Number, default: 0 } });
+const Counter = model('Counter', counterSchema);
+
+export async function nextApplicationNumber(year = new Date().getFullYear()) {
+  const c = await Counter.findOneAndUpdate({ _id: `application-${year}` }, { $inc: { seq: 1 } }, { upsert: true, new: true });
+  return `EB-${year}-${String(c.seq).padStart(6, '0')}`;
+}

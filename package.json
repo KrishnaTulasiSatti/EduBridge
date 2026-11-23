@@ -1,0 +1,22 @@
+{
+  "name": "edubridge-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web,vault-api,vault-web -c magenta,cyan,blue,green \"npm run dev -w @edubridge/api\" \"npm run dev -w @edubridge/web\" \"npm run dev -w @eduvault/api\" \"npm run dev -w @eduvault/web\"",
+    "dev:edubridge": "concurrently -n api,web -c magenta,cyan \"npm run dev -w @edubridge/api\" \"npm run dev -w @edubridge/web\"",
+    "dev:eduvault": "concurrently -n vault-api,vault-web -c blue,green \"npm run dev -w @eduvault/api\" \"npm run dev -w @eduvault/web\"",
+    "build": "npm run build -w @edubridge/api && npm run build -w @edubridge/web && npm run build -w @eduvault/api && npm run build -w @eduvault/web",
+    "test": "npm run test -w @edubridge/api && npm run test -w @eduvault/api",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "seed": "npm run seed -w @edubridge/api && npm run seed -w @eduvault/api"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.7.3"
+  }
+}
