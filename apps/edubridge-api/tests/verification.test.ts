@@ -4,6 +4,7 @@ import { createApp } from '../src/app';
 import { connectDB, disconnectDB } from '../src/config/db';
 import { AuditLog } from '../src/modules/audit/audit.model';
 import { vaultClient } from '../src/modules/eduvault/vaultClient';
+import { MlError, mlClient } from '../src/modules/assessment/mlClient';
 import { clearRegistryCache } from '../src/modules/verification/registry';
 import { DEMO_PASSWORD, seedDemoUsers } from '../src/scripts/seedData';
 import { StudentDocument } from '../src/modules/applications/models';
@@ -74,6 +75,9 @@ afterAll(async () => {
   vi.restoreAllMocks();
   await disconnectDB();
 });
+
+// The ML service is not part of these tests.
+vi.spyOn(mlClient, 'predict').mockRejectedValue(new MlError(503, 'ML service not running'));
 
 // The EduVault issuer registry is mocked so the tests do not depend on EduVault running.
 vi.spyOn(vaultClient, 'listIssuers').mockResolvedValue({
@@ -287,7 +291,11 @@ describe('volunteer verification workflow', () => {
       .set('Authorization', volunteer)
       .send({ recommendation: 'NEEDS_ADMIN_ATTENTION', summary: 'Income on the certificate is higher than declared in the application.' });
     expect(res.status).toBe(200);
-    expect(res.body.application.status).toBe('VOLUNTEER_REVIEWED');
+    // The need assessment runs straight after the volunteer review.
+    expect(res.body.application.status).toBe('ASSESSED');
+    expect(res.body.application.history.map((h: { status: string }) => h.status)).toEqual(
+      expect.arrayContaining(['VOLUNTEER_REVIEWED', 'ASSESSED']),
+    );
     expect(res.body.canEdit).toBe(false);
     expect(res.body.volunteerReview).toMatchObject({ recommendation: 'NEEDS_ADMIN_ATTENTION', by: { name: 'Meera Iyer' } });
 

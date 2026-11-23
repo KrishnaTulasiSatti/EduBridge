@@ -7,6 +7,8 @@ import {
   GENDERS,
   INDIAN_STATES,
   RECOMMENDATIONS,
+  DECISIONS,
+  NEED_LEVELS,
   SPECIAL_CIRCUMSTANCES,
 } from '@edubridge/shared';
 
@@ -113,6 +115,27 @@ const applicationSchema = new Schema(
     assignment: {
       type: new Schema(
         { volunteer: { type: Types.ObjectId, ref: 'User', required: true }, claimedAt: { type: Date, required: true } },
+        { _id: false },
+      ),
+      default: undefined,
+    },
+    /** Rule-based score and ML second opinion (AssessmentDTO). Re-run on request; the one at decision time is kept with the decision. */
+    assessment: { type: Schema.Types.Mixed },
+    /** The administrator's final eligibility decision. Its need level is the label the ML model learns from. */
+    decision: {
+      type: new Schema(
+        {
+          decision: { type: String, enum: DECISIONS, required: true },
+          needLevel: { type: String, enum: NEED_LEVELS, required: true },
+          approvedAmount: Number,
+          reason: { type: String, required: true },
+          messageToStudent: String,
+          by: { type: Types.ObjectId, ref: 'User', required: true },
+          at: { type: Date, required: true },
+          /** Features used for this decision, kept as the ML training example. */
+          features: { type: Schema.Types.Mixed },
+          ruleScore: Number,
+        },
         { _id: false },
       ),
       default: undefined,

@@ -1,0 +1,11 @@
+{
+  "name": "@edubridge/ml-service",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Python FastAPI + scikit-learn need-assessment service (experimental second opinion)",
+  "scripts": {
+    "setup": "node run.mjs setup",
+    "dev": "node run.mjs dev",
+    "test": "node run.mjs test"
+  }
+}

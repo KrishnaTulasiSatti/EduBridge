@@ -10,6 +10,7 @@ import { authRouter } from './modules/auth/auth.routes';
 import { eduvaultRouter } from './modules/eduvault/eduvault.routes';
 import { usersRouter } from './modules/users/users.routes';
 import { verificationRouter } from './modules/verification/verification.routes';
+import { reviewRouter } from './modules/assessment/review.routes';
 
 export function createApp() {
   const app = express();
@@ -33,6 +34,7 @@ export function createApp() {
   app.use('/api/documents', documentsRouter);
   app.use('/api/eduvault', eduvaultRouter);
   app.use('/api/verification', verificationRouter);
+  app.use('/api/review', reviewRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

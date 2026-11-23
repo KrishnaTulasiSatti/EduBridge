@@ -116,6 +116,14 @@ export async function toApplicationDTO(app: ApplicationDoc, forReviewer = false)
     createdAt: app.createdAt.toISOString(),
     updatedAt: app.updatedAt.toISOString(),
     profileSnapshot: app.profileSnapshot ? (plain(app.profileSnapshot) as unknown as StudentProfileDTO) : undefined,
+    outcome: app.decision
+      ? {
+          decision: app.decision.decision,
+          approvedAmount: app.decision.approvedAmount ?? undefined,
+          message: app.decision.messageToStudent ?? undefined,
+          decidedAt: app.decision.at.toISOString(),
+        }
+      : undefined,
   };
 }
 

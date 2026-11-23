@@ -32,6 +32,11 @@
   --info-soft: #e7edf5;
 
   --ring: #2f5d50;
+
+  /* Chart marks: one data hue (validated: chroma and 3:1 contrast on the surface), track = lighter step. */
+  --chart: #1a7d58;
+  --chart-track: color-mix(in srgb, #1a7d58 14%, #ffffff);
+  --chart-on: #ffffff; /* text inside a strong chart fill */
 }
 
 .dark {
@@ -60,6 +65,10 @@
   --info-soft: #1e2733;
 
   --ring: #8fbcab;
+
+  --chart: #4fa784;
+  --chart-track: color-mix(in srgb, #4fa784 18%, #1b1e1c);
+  --chart-on: #0f1a15;
 }
 
 @theme inline {
@@ -88,6 +97,8 @@
   --color-info: var(--info);
   --color-info-soft: var(--info-soft);
   --color-ring: var(--ring);
+  --color-chart: var(--chart);
+  --color-chart-track: var(--chart-track);
 
   --shadow-card: 0 1px 2px rgb(29 33 31 / 0.04);
   --shadow-pop: 0 8px 24px -8px rgb(29 33 31 / 0.16), 0 2px 6px rgb(29 33 31 / 0.06);

@@ -20,6 +20,9 @@ const EduVaultCallback = lazy(() => import('@/pages/student/EduVaultCallback'));
 const ApplicationsPage = lazy(() => import('@/pages/admin/ApplicationsPage'));
 const QueuePage = lazy(() => import('@/pages/verification/QueuePage'));
 const VerifyApplicationPage = lazy(() => import('@/pages/verification/VerifyApplicationPage'));
+const ReviewQueuePage = lazy(() => import('@/pages/review/ReviewQueuePage'));
+const ReviewApplicationPage = lazy(() => import('@/pages/review/ReviewApplicationPage'));
+const ModelPage = lazy(() => import('@/pages/review/ModelPage'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 // Pages that are not built yet render a placeholder.
@@ -96,6 +99,9 @@ export default function App() {
                   }
                 />
                 <Route path="verify/:id" element={<ProtectedRoute roles={['VOLUNTEER', 'ADMIN']}><VerifyApplicationPage /></ProtectedRoute>} />
+                <Route path="review" element={<ProtectedRoute roles={['ADMIN']}><ReviewQueuePage /></ProtectedRoute>} />
+                <Route path="review/:id" element={<ProtectedRoute roles={['ADMIN']}><ReviewApplicationPage /></ProtectedRoute>} />
+                <Route path="model" element={<ProtectedRoute roles={['ADMIN']}><ModelPage /></ProtectedRoute>} />
                 <Route path="users" element={<ProtectedRoute roles={['ADMIN']}><UsersPage /></ProtectedRoute>} />
                 {placeholderPaths.map((p) => (
                   <Route key={p} path={p} element={<ComingSoon />} />

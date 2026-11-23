@@ -4,6 +4,7 @@ import { DOCUMENT_TYPES, currentAcademicYear } from '@edubridge/shared';
 import { ApplicationSummary } from '@/components/application/ApplicationSummary';
 import { ApplicationWizard } from '@/components/application/ApplicationWizard';
 import { DocumentCard } from '@/components/application/DocumentCard';
+import { OutcomeNotice } from '@/components/application/OutcomeNotice';
 import { ApplicationStatusBadge } from '@/components/application/status';
 import { StatusTracker } from '@/components/application/StatusTracker';
 import { PageHeader, Skeleton } from '@/components/dashboard/widgets';
@@ -82,6 +83,7 @@ export default function ApplicationPage() {
   return (
     <>
       <PageHeader meta={meta} title="Your application" description={`Submitted on ${formatDate(application.submittedAt, true)}.`} />
+      <OutcomeNotice application={application} className="mb-6" />
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-6">
           <Card>

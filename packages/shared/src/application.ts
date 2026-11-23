@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { Decision } from './assessment';
 import type { DocumentReviewDTO, EnrolmentCheckDTO } from './verification';
 
 /* ------------------------------------------------------------------ Enums */
@@ -321,6 +322,8 @@ export interface ApplicationDTO {
   submittedAt?: string;
   createdAt: string;
   updatedAt: string;
+  /** The administrator's decision as the student sees it (no internal reasons or scores). */
+  outcome?: { decision: Decision; approvedAmount?: number; message?: string; decidedAt: string };
   /** Profile captured at submission time (present once submitted). */
   profileSnapshot?: StudentProfileDTO;
 }

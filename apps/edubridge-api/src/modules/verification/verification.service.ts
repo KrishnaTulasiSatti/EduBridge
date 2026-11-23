@@ -34,6 +34,7 @@ import { User } from '../auth/user.model';
 import { namesMatch, rollNumbersMatch } from '../eduvault/verify';
 import { VaultError, vaultClient } from '../eduvault/vaultClient';
 import { checkInstitution } from './registry';
+import { assessAfterVolunteerReview } from '../assessment/assessment.service';
 
 type Actor = { id: string; role: Role };
 type Plain = Record<string, unknown>;
@@ -494,6 +495,8 @@ export async function submitReview(user: Actor, appId: string, input: VolunteerR
     metadata: { applicationNumber: app.applicationNumber, recommendation: input.recommendation, documents: Object.fromEntries(docs.map((d) => [d.type, d.status])) },
     req,
   });
+  // Hand over to need assessment straight away; the application then waits for the admin's decision.
+  await assessAfterVolunteerReview(app._id, user.id);
   return detail(user, appId);
 }
 

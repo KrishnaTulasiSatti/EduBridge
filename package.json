@@ -7,11 +7,13 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "concurrently -n api,web,vault-api,vault-web -c magenta,cyan,blue,green \"npm run dev -w @edubridge/api\" \"npm run dev -w @edubridge/web\" \"npm run dev -w @eduvault/api\" \"npm run dev -w @eduvault/web\"",
+    "dev": "concurrently -n api,web,vault-api,vault-web,ml -c magenta,cyan,blue,green,yellow \"npm run dev -w @edubridge/api\" \"npm run dev -w @edubridge/web\" \"npm run dev -w @eduvault/api\" \"npm run dev -w @eduvault/web\" \"npm run dev -w @edubridge/ml-service\"",
     "dev:edubridge": "concurrently -n api,web -c magenta,cyan \"npm run dev -w @edubridge/api\" \"npm run dev -w @edubridge/web\"",
     "dev:eduvault": "concurrently -n vault-api,vault-web -c blue,green \"npm run dev -w @eduvault/api\" \"npm run dev -w @eduvault/web\"",
+    "dev:ml": "npm run dev -w @edubridge/ml-service",
+    "ml:setup": "npm run setup -w @edubridge/ml-service",
     "build": "npm run build -w @edubridge/api && npm run build -w @edubridge/web && npm run build -w @eduvault/api && npm run build -w @eduvault/web",
-    "test": "npm run test -w @edubridge/api && npm run test -w @eduvault/api",
+    "test": "npm run test -w @edubridge/api && npm run test -w @eduvault/api && npm run test -w @edubridge/ml-service",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "seed": "npm run seed -w @edubridge/api && npm run seed -w @eduvault/api"
   },

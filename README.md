@@ -13,7 +13,7 @@ apps/
   edubridge-api   Node.js + Express 5 + TypeScript + Mongoose
   eduvault-web    React + Tailwind — simulated DigiLocker-style document locker
   eduvault-api    Express + Mongoose — institutions, Ed25519 signing, consent, one-time sharing
-  ml-service      (Phase 5) Python + FastAPI + scikit-learn need assessment
+  ml-service      Python + FastAPI + scikit-learn need-assessment model (experimental second opinion)
 packages/
   shared          Zod schemas and TypeScript types shared by EduBridge web and api
   eduvault-shared EduVault schemas, signed-document format and canonical JSON (used by both APIs)
@@ -21,14 +21,15 @@ packages/
 
 ## Quick start
 
-Requirements: Node.js 20.19+ and npm 10.
+Requirements: Node.js 20.19+, npm 10 and Python 3.10+ (for the ML service).
 
 ```bash
 npm install
+npm run ml:setup   # once: creates apps/ml-service/.venv and installs the Python packages
 npm run dev
 ```
 
-`npm run dev` starts all four apps. Each port is fixed (Vite fails instead of moving), because EduVault redirects back to an exact address.
+`npm run dev` starts all five apps. Each port is fixed (Vite fails instead of moving), because EduVault redirects back to an exact address.
 
 | App            | URL                                  |
 | -------------- | ------------------------------------ |
@@ -36,6 +37,7 @@ npm run dev
 | EduBridge API  | http://localhost:5000/api/health     |
 | EduVault web   | http://localhost:5174                |
 | EduVault API   | http://localhost:5100/api/health     |
+| ML service     | http://127.0.0.1:8000/health         |
 
 No database setup is needed for development. When `MONGODB_URI` in `apps/edubridge-api/.env` is empty, the API starts an
 in-memory MongoDB and seeds demo accounts. The data resets on every restart. The first run downloads a MongoDB binary (~600 MB, one time).
@@ -72,7 +74,7 @@ EduVault (same password `Demo@1234`):
 | Command             | What it does                                  |
 | ------------------- | --------------------------------------------- |
 | `npm run dev`       | Runs API and web together                     |
-| `npm test`          | API integration tests (Vitest + Supertest)    |
+| `npm test`          | API integration tests (Vitest + Supertest) and ML service tests (pytest) |
 | `npm run typecheck` | Type-checks every workspace                   |
 | `npm run build`     | Production builds of API and web              |
 | `npm run seed`      | Seeds demo users into the configured database |
@@ -149,13 +151,34 @@ A separate, clearly labelled simulation of a DigiLocker-style locker. It is not 
   Reviewer notes are never shown to students. Claims, releases, each check and each review are audited.
 
 
+## Need assessment and admin decisions (Phase 5)
+
+- When a volunteer submits their review, the application is **assessed automatically** and moves to `ASSESSED`.
+- **Rule-based need score (primary, 0–100)**, fully explainable, every point traced to one factor:
+  income per family member (35), education cost burden vs income (25), dependents (15), special circumstances (15, capped),
+  cost not covered by other aid (10). High need from 65, medium from 40. If the volunteer recorded the income shown on
+  AP Seva, that **verified income** is used instead of the declared one.
+- **ML second opinion (experimental)** from `apps/ml-service`: Logistic Regression (baseline), Decision Tree (explainable)
+  and Random Forest are compared with **stratified 5-fold cross-validation**; the best macro F1 is used. The report shows
+  accuracy, precision, recall, F1, the **confusion matrix**, feature importance and a **fairness check by gender**
+  (gender, location, caste and religion are never model inputs).
+  - The genuine route trains on **admins' decisions** (the need level they confirm), once there are at least 30 decided
+    applications with at least 5 per level used.
+  - A **demonstration model** can be trained on 600 synthetic applications. Its predictions are always labelled
+    "Demonstration · synthetic data" and must not be treated as real assessments (spec: never present synthetic predictions as genuine).
+  - If the ML service is down, assessments continue with the rule-based score alone.
+- **Admin decision**: approve (with the amount approved for sponsorship), put on hold, or not approve; a confirmed need level;
+  an internal reason (audited); an optional message the student sees. Approved / not approved are final.
+- **Privacy**: the encrypted Aadhaar number is deleted once a final decision is made (the last 4 digits remain).
+- The ML service is called only by the EduBridge API with a shared token (`ML_SERVICE_TOKEN` in both `.env` files).
+
 ## Development phases
 
 1. ✅ Setup, design system, landing page, authentication and roles
 2. ✅ Student profile, application wizard, document upload, status tracker
 3. ✅ EduVault: institutions, marksheet issuing, Ed25519 signatures, consent and sharing
 4. ✅ Income and college ID verification, volunteer workspace
-5. Admin review, rule-based need assessment, ML service and model evaluation
+5. ✅ Admin review, rule-based need assessment, ML service and model evaluation
 6. Sponsor matching, sponsorship management, certificates
 7. Analytics dashboard, audit log explorer, security hardening
 8. End-to-end tests, demo data, deployment

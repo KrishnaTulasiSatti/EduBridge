@@ -8,3 +8,7 @@ coverage
 .DS_Store
 __pycache__
 .venv
+
+# ML service
+apps/ml-service/models
+.pytest_cache

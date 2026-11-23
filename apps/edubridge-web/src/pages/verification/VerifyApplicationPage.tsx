@@ -312,9 +312,12 @@ export default function VerifyApplicationPage() {
           {data.assignee!.name} started verifying this application on {formatDate(data.assignee!.claimedAt, true)}. You can view it but not record results.
         </Alert>
       )}
-      {app.status === 'VOLUNTEER_REVIEWED' && (
+      {data.volunteerReview && (
         <Alert tone="success" className="mb-6">
-          Preliminary verification is complete. The application is waiting for an administrator’s assessment.
+          Preliminary verification is complete.{' '}
+          {app.status === 'ASSESSED' || app.status === 'VOLUNTEER_REVIEWED'
+            ? 'The application is waiting for an administrator’s decision.'
+            : 'An administrator has reviewed it.'}
         </Alert>
       )}
 

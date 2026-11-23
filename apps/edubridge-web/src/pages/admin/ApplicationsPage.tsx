@@ -82,7 +82,7 @@ export default function ApplicationsPage() {
               {data?.items.map((a) => (
                 <tr key={a.id} className="border-b border-border last:border-0 hover:bg-sunken/50">
                   <td className="px-5 py-3.5">
-                    <Link to={`/dashboard/verify/${a.id}`} className="font-medium hover:text-primary-ink hover:underline">
+                    <Link to={['SUBMITTED', 'UNDER_VERIFICATION', 'VOLUNTEER_REVIEWED'].includes(a.status) ? `/dashboard/verify/${a.id}` : `/dashboard/review/${a.id}`} className="font-medium hover:text-primary-ink hover:underline">
                       {a.studentName}
                     </Link>
                     <p className="text-[13px] text-subtle">{a.applicationNumber}</p>

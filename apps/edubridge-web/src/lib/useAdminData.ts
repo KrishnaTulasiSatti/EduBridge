@@ -97,5 +97,8 @@ export const ACTION_LABELS: Record<string, string> = {
   DOCUMENT_REVIEWED: 'recorded a document check',
   ENROLMENT_CHECKED: 'checked a college enrolment on EduVault',
   AADHAAR_VIEWED: 'viewed a student’s Aadhaar number',
+  ASSESSMENT_RUN: 'ran a need assessment',
+  APPLICATION_DECIDED: 'recorded an eligibility decision',
+  MODEL_TRAINED: 'trained the need model',
   VOLUNTEER_REVIEW_SUBMITTED: 'submitted a volunteer review',
 };

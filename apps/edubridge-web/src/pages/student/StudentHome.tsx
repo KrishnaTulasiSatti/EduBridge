@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { DOCUMENT_TYPE_LABELS, DOCUMENT_TYPES, currentAcademicYear } from '@edubridge/shared';
 import { ApplicationStatusBadge, DocumentStatusBadge } from '@/components/application/status';
+import { OutcomeNotice } from '@/components/application/OutcomeNotice';
 import { StatusTracker } from '@/components/application/StatusTracker';
 import { DefinitionList, PageHeader, Skeleton } from '@/components/dashboard/widgets';
 import { Alert } from '@/components/ui/alert';
@@ -133,6 +134,7 @@ export default function StudentHome() {
   return (
     <>
       <PageHeader title={`${greeting()}, ${first}`} description="Here is where your application stands." />
+      <OutcomeNotice application={application} className="mb-6" />
       <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
         <Card>
           <CardHeader title="Application progress" action={<ApplicationStatusBadge status={application.status} />} />
