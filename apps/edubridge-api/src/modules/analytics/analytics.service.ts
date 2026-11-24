@@ -194,7 +194,7 @@ export async function platformAnalytics(): Promise<AnalyticsDTO> {
       sponsors: budget.sponsors,
       sponsorBudget: budget.budget,
       sponsorCommitted: budget.committed,
-      pledges: { count: sp('PLEDGED').n, amount: sp('PLEDGED').amount },
+      pledges: { count: sp('PLEDGED').n + sp('SENT').n, amount: sp('PLEDGED').amount + sp('SENT').amount },
       confirmed: { count: sp('CONFIRMED').n, amount: sp('CONFIRMED').amount },
       cancelled: { count: sp('CANCELLED').n, amount: sp('CANCELLED').amount },
     },

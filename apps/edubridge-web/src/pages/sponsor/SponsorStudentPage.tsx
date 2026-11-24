@@ -132,8 +132,10 @@ export default function SponsorStudentPage() {
               {s.mySponsorship ? (
                 <Alert tone="success" title={`You ${s.mySponsorship.status === 'CONFIRMED' ? 'are supporting' : 'pledged'} ${formatINR(s.mySponsorship.amount)}`}>
                   {s.mySponsorship.status === 'PLEDGED'
-                    ? 'An administrator will confirm it once the funds are received.'
-                    : 'The funds have been received. Thank you.'}{' '}
+                    ? 'Send the money to the student’s bank account from My sponsorships.'
+                    : s.mySponsorship.status === 'SENT'
+                      ? 'You sent the money. The student will confirm once it arrives.'
+                      : 'The student received the money. Thank you.'}{' '}
                   <Link to="/dashboard/sponsorships" className="underline underline-offset-2">
                     My sponsorships
                   </Link>

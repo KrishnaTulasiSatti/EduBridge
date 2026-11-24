@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import type {
+  BankDetailsForSponsorDTO,
+  BankDetailsInput,
   CertificateDTO,
   ConfirmSponsorshipInput,
   EducationLevel,
+  MarkSentInput,
   NeedLevel,
   PledgeInput,
   SponsorPreferences,
@@ -55,6 +58,12 @@ export const sponsorApi = {
   async withdraw(id: string) {
     return (await api.post<{ items: SponsorshipDTO[] }>(`/sponsor/sponsorships/${id}/withdraw`)).data.items;
   },
+  async bankDetails(id: string) {
+    return (await api.get<{ bankDetails: BankDetailsForSponsorDTO }>(`/sponsor/sponsorships/${id}/bank-details`)).data.bankDetails;
+  },
+  async markSent(id: string, body: MarkSentInput) {
+    return (await api.post<{ items: SponsorshipDTO[] }>(`/sponsor/sponsorships/${id}/sent`, body)).data.items;
+  },
 };
 
 export const fundingApi = {
@@ -63,6 +72,15 @@ export const fundingApi = {
   },
   async setVisibility(body: SponsorVisibilityInput) {
     return (await api.put<StudentFundingDTO>('/funding/me/visibility', body)).data;
+  },
+  async saveBankDetails(body: BankDetailsInput) {
+    return (await api.put<StudentFundingDTO>('/funding/me/bank-details', body)).data;
+  },
+  async received(id: string) {
+    return (await api.post<StudentFundingDTO>(`/funding/me/sponsorships/${id}/received`)).data;
+  },
+  async notReceived(id: string, note: string) {
+    return (await api.post<StudentFundingDTO>(`/funding/me/sponsorships/${id}/not-received`, { note })).data;
   },
 };
 

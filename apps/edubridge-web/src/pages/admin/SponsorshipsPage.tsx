@@ -16,7 +16,7 @@ import { cn, formatINR } from '@/lib/utils';
 const today = () => new Date().toISOString().slice(0, 10);
 
 function ConfirmPanel({ s, onDone, onClose }: { s: SponsorshipDTO; onDone: () => void; onClose: () => void }) {
-  const [form, setForm] = useState({ receivedOn: today(), reference: '', note: '' });
+  const [form, setForm] = useState({ receivedOn: s.payment?.sentOn ?? today(), reference: s.payment?.reference ?? '', note: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const set = (k: keyof typeof form, v: string) => {
@@ -47,7 +47,8 @@ function ConfirmPanel({ s, onDone, onClose }: { s: SponsorshipDTO; onDone: () =>
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Record that {formatINR(s.amount)} from {s.sponsor.name} has been received. The student’s funding is updated and certificates are issued to both.
+        Normally the student confirms the money themselves. Use this only once you have checked that {formatINR(s.amount)} from {s.sponsor.name} reached the student’s
+        account (for example, after a “not received” report). The student’s funding is updated and certificates are issued to both.
       </p>
       <div className="grid gap-4 sm:grid-cols-[180px_1fr]">
         <Field label="Date received" htmlFor={`d-${s.id}`} error={errors.receivedOn}>
@@ -128,8 +129,9 @@ export default function SponsorshipsPage() {
 
   const tabs: { id?: SponsorshipStatus; label: string; count?: number }[] = [
     { label: 'All' },
-    { id: 'PLEDGED', label: 'Awaiting confirmation', count: c?.PLEDGED },
-    { id: 'CONFIRMED', label: 'Confirmed', count: c?.CONFIRMED },
+    { id: 'PLEDGED', label: 'Waiting for sponsor', count: c?.PLEDGED },
+    { id: 'SENT', label: 'Waiting for student', count: c?.SENT },
+    { id: 'CONFIRMED', label: 'Received', count: c?.CONFIRMED },
     { id: 'CANCELLED', label: 'Cancelled' },
   ];
 
@@ -137,12 +139,12 @@ export default function SponsorshipsPage() {
     <>
       <PageHeader
         title="Sponsorships"
-        description="Pledges from sponsors and the funds received. Confirm a pledge once the money has arrived; the student’s funding and certificates update automatically."
+        description="Sponsors send money straight to students’ bank accounts and students confirm it arrived, so most sponsorships need nothing from you. Step in when a student reports money as not received."
       />
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Confirmed" value={t ? formatINR(t.confirmed) : '—'} hint={c ? `${c.CONFIRMED} sponsorship${c.CONFIRMED === 1 ? '' : 's'}` : undefined} />
-        <Stat label="Pledged, awaiting funds" value={t ? formatINR(t.pledged) : '—'} hint={c ? `${c.PLEDGED} pledge${c.PLEDGED === 1 ? '' : 's'}` : undefined} />
+        <Stat label="Pledged, not yet received" value={t ? formatINR(t.pledged) : '—'} hint={c ? `${c.PLEDGED} to send, ${c.SENT} sent` : undefined} />
         <Stat label="Still needed" value={t ? formatINR(t.remaining) : '—'} hint={t ? `${t.eligibleStudents} approved student${t.eligibleStudents === 1 ? '' : 's'}, ${t.visibleStudents} shown to sponsors` : undefined} />
         <Stat label="Fully funded" value={t ? t.fullyFunded : '—'} hint={t ? `${t.sponsors} sponsor${t.sponsors === 1 ? '' : 's'} with preferences set` : undefined} />
       </div>
@@ -209,15 +211,22 @@ export default function SponsorshipsPage() {
                   </p>
                   <p className="mt-0.5 text-[13px] text-muted-foreground">
                     {sponsorshipStatusLine(s)}
-                    {s.confirmation?.reference && ` · ref ${s.confirmation.reference}`}
+                    {s.status === 'SENT' && s.payment && ` · UTR ${s.payment.reference}${s.payment.toAccountLast4 ? ` to ••${s.payment.toAccountLast4}` : ''}`}
+                    {s.status === 'CONFIRMED' && s.confirmation?.reference && ` · ref ${s.confirmation.reference}`}
                     {s.cancelNote && ` · “${s.cancelNote}”`}
                   </p>
+                  {s.status === 'SENT' && s.payment?.notReceived && (
+                    <p className="mt-1 text-[13px] font-medium text-danger">
+                      Student reported not received on {new Date(s.payment.notReceived.at).toLocaleDateString('en-IN')}
+                      {s.payment.notReceived.note && `: “${s.payment.notReceived.note}”`}
+                    </p>
+                  )}
                 </div>
                 <p className="text-lg font-semibold tabular-nums md:w-32 md:text-right">{formatINR(s.amount)}</p>
                 <div className="flex shrink-0 gap-2 md:w-60 md:justify-end">
-                  {s.status === 'PLEDGED' && (
+                  {(s.status === 'PLEDGED' || s.status === 'SENT') && (
                     <Button size="sm" variant="secondary" onClick={() => setOpen({ id: s.id, panel: 'confirm' })}>
-                      Confirm funds
+                      Mark received
                     </Button>
                   )}
                   {s.status !== 'CANCELLED' && (
@@ -247,8 +256,8 @@ export default function SponsorshipsPage() {
         {data && data.items.length === 0 && (
           <EmptyState
             icon={HandCoins}
-            title={search ? 'No matching sponsorships' : status === 'PLEDGED' ? 'No pledges waiting' : 'No sponsorships yet'}
-            text={!search && !status ? 'When sponsors pledge support to approved students, their pledges appear here for confirmation.' : undefined}
+            title={search ? 'No matching sponsorships' : status === 'PLEDGED' || status === 'SENT' ? 'Nothing waiting' : 'No sponsorships yet'}
+            text={!search && !status ? 'When sponsors pledge support to approved students, their sponsorships appear here.' : undefined}
           />
         )}
         {data && data.total > data.limit && (

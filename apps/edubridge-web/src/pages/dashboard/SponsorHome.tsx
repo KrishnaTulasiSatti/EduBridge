@@ -39,7 +39,7 @@ export default function SponsorHome() {
       {p && (
         <div className="mb-6 grid gap-4 sm:grid-cols-3">
           <Stat label="Confirmed support" value={formatINR(p.confirmed)} />
-          <Stat label="Pledged, awaiting confirmation" value={formatINR(p.committed - p.confirmed)} />
+          <Stat label="Pledged, not yet received" value={formatINR(p.committed - p.confirmed)} />
           <Stat label="Available to give" value={formatINR(p.available)} hint={`of ${formatINR(p.budget)} budget`} />
         </div>
       )}

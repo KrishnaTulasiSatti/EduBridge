@@ -1,9 +1,12 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import {
+  bankDetailsSchema,
   cancelSponsorshipSchema,
   confirmSponsorshipSchema,
+  markSentSchema,
   pledgeSchema,
+  reportNotReceivedSchema,
   sponsorPreferencesSchema,
   sponsorVisibilitySchema,
 } from '@edubridge/shared';
@@ -38,6 +41,12 @@ sponsorRouter.get('/sponsorships', async (req, res) => {
 sponsorRouter.post('/sponsorships/:id/withdraw', async (req, res) => {
   res.json(await svc.withdrawPledge(req.user!, String(req.params.id), req));
 });
+sponsorRouter.get('/sponsorships/:id/bank-details', async (req, res) => {
+  res.json(await svc.bankDetailsForSponsor(req.user!, String(req.params.id), req));
+});
+sponsorRouter.post('/sponsorships/:id/sent', validateBody(markSentSchema), async (req, res) => {
+  res.json(await svc.markSent(req.user!, String(req.params.id), req.body, req));
+});
 
 /** Students: their funding and whether sponsors may see their anonymised profile. */
 export const fundingRouter = Router();
@@ -49,8 +58,17 @@ fundingRouter.get('/me', async (req, res) => {
 fundingRouter.put('/me/visibility', validateBody(sponsorVisibilitySchema), async (req, res) => {
   res.json(await svc.setVisibility(req.user!, req.body, req));
 });
+fundingRouter.put('/me/bank-details', validateBody(bankDetailsSchema), async (req, res) => {
+  res.json(await svc.saveBankDetails(req.user!, req.body, req));
+});
+fundingRouter.post('/me/sponsorships/:id/received', async (req, res) => {
+  res.json(await svc.confirmReceived(req.user!, String(req.params.id), req));
+});
+fundingRouter.post('/me/sponsorships/:id/not-received', validateBody(reportNotReceivedSchema), async (req, res) => {
+  res.json(await svc.reportNotReceived(req.user!, String(req.params.id), req.body.note, req));
+});
 
-/** Administrators: monitor sponsorships, confirm received funds, cancel. */
+/** Administrators: monitor sponsorships, settle "not received" reports, cancel. */
 export const adminSponsorshipsRouter = Router();
 adminSponsorshipsRouter.use(authenticate, requireRole('ADMIN'));
 

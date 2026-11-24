@@ -34,7 +34,7 @@ npm run dev
 | App            | URL                                  |
 | -------------- | ------------------------------------ |
 | EduBridge web  | http://localhost:5173                |
-| EduBridge API  | http://localhost:5000/api/health     |
+| EduBridge API  | http://localhost:5001/api/health     |
 | EduVault web   | http://localhost:5174                |
 | EduVault API   | http://localhost:5100/api/health     |
 | ML service     | http://127.0.0.1:8000/health         |
@@ -182,19 +182,26 @@ A separate, clearly labelled simulation of a DigiLocker-style locker. It is not 
 - **Matching** (rule-based, explainable): `0.30 × level + 0.30 × support category + 0.25 × budget fit + 0.15 × other preferences`.
   An empty preference means “any”. Category match is the share of the student's costs in the sponsor's preferred categories.
   Ties are broken by need level, then remaining requirement. Each student card shows why it was suggested.
-- **Pledge → confirm**: a sponsor pledges an amount (minimum ₹500). The pledge reserves it for **14 days**; an administrator
-  confirms it once the funds are received (date + payment reference). Unconfirmed pledges are released automatically.
-  Sponsors can withdraw a pledge until it is confirmed; admins can cancel any sponsorship (a confirmed one only if the money was returned).
+- **Pledge → send → received** (no administrator needed):
+  1. A sponsor pledges an amount (minimum ₹500). The pledge reserves it for **14 days**; if the money is not sent by then it is released automatically.
+     Sponsors can withdraw a pledge until they send the money.
+  2. The student adds their **bank account** (name, account number, IFSC, bank) on the *Sponsorship* page. The account number is
+     **encrypted at rest** (AES-256-GCM, `DATA_ENCRYPTION_KEY`); the student sees only the last 4 digits.
+  3. The sponsor clicks **Send money** on *My sponsorships*, opens the bank details (audited; shown only to that sponsor and only while the
+     money is still to be sent), transfers it by NEFT/IMPS/RTGS and records the date and **UTR**. The sponsorship becomes `SENT`.
+  4. The student checks their account and clicks **Yes, I received it**. The sponsorship becomes `CONFIRMED` and certificates are issued.
+     If it has not arrived they click **Not received yet**; the sponsor is told and can record a corrected transfer, and an administrator can
+     settle it (**Mark received** or **Cancel**).
 - **Over-allocation is impossible**: each pledge runs in a **MongoDB transaction** whose updates check
   `pledged + confirmed + amount ≤ approved amount` and `committed + amount ≤ sponsor budget` atomically, so two sponsors pledging at
   the same moment cannot over-fund a student. One active sponsorship per sponsor per student (partial unique index).
 - The application moves to `PARTIALLY_FUNDED` / `FULLY_FUNDED` from **confirmed** amounts; fully funded students leave discovery.
-- **Certificates**: on confirmation EduBridge issues a sponsor certificate of appreciation and a student award certificate.
+- **Certificates**: once the money is confirmed as received, EduBridge issues a sponsor certificate of appreciation and a student award certificate.
   Each is a canonical JSON record hashed with SHA-256 and **signed with EduBridge's Ed25519 key** (`CERTIFICATE_SIGNING_KEY`).
   `/certificates/<number>?code=<code>` is a public, printable verification page (the random code printed on the certificate is required);
   it re-verifies the signature and shows if the certificate was revoked. The public key is at `/api/certificates/public-key`.
-- Every action (preferences, consent, pledge, withdrawal, expiry, confirmation, cancellation, certificate issue/revoke) is audited.
-- No payment gateway yet: funds are transferred outside the platform and recorded by an administrator (as the spec allows).
+- Every action (preferences, consent, bank details saved or viewed, pledge, withdrawal, expiry, money sent, not-received report, confirmation, cancellation, certificate issue/revoke) is audited.
+- No payment gateway: sponsors transfer the money directly to the student's bank account, outside the platform. EduBridge records each step.
 
 ## Analytics, audit log explorer and security hardening (Phase 7)
 

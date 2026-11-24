@@ -30,6 +30,10 @@ export const AUDIT_ACTIONS = {
   SPONSOR_PREFERENCES_UPDATED: 'SPONSOR_PREFERENCES_UPDATED',
   SPONSOR_VISIBILITY_CHANGED: 'SPONSOR_VISIBILITY_CHANGED',
   SPONSORSHIP_PLEDGED: 'SPONSORSHIP_PLEDGED',
+  BANK_DETAILS_SAVED: 'BANK_DETAILS_SAVED',
+  BANK_DETAILS_VIEWED: 'BANK_DETAILS_VIEWED',
+  SPONSORSHIP_SENT: 'SPONSORSHIP_SENT',
+  SPONSORSHIP_NOT_RECEIVED: 'SPONSORSHIP_NOT_RECEIVED',
   SPONSORSHIP_CONFIRMED: 'SPONSORSHIP_CONFIRMED',
   SPONSORSHIP_CANCELLED: 'SPONSORSHIP_CANCELLED',
   SPONSORSHIP_EXPIRED: 'SPONSORSHIP_EXPIRED',
@@ -51,7 +55,7 @@ interface AuditEntry {
 }
 
 // Defence in depth: secrets must never reach the audit log, even if a caller passes them by mistake.
-const SECRET_KEY = /password|passcode|token|secret|privatekey|aadhaar(?!last4)|^otp$|^code$/i;
+const SECRET_KEY = /password|passcode|token|secret|privatekey|aadhaar(?!last4)|accountnumber(?!last4)|^otp$|^code$/i;
 
 export function redact(value: unknown, depth = 0): unknown {
   if (depth > 5 || value === null || typeof value !== 'object') return value;

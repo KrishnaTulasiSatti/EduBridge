@@ -257,9 +257,66 @@ describe('sponsorship', () => {
     expect((await Application.findById(appId).lean())!.funding!.pledged).toBe(0);
   });
 
+  it('lets the sponsor send money straight to the student’s bank account and the student confirm it', async () => {
+    const ACCOUNT = '123456789012';
+    const res = await request(app).post(`/api/sponsor/students/${appId}/pledge`).set('Authorization', sponsor).send({ amount: 30000 });
+    expect(res.status).toBe(201);
+    const id = res.body.sponsorship.id;
+    expect(res.body.sponsorship.studentBankReady).toBe(false);
+
+    // Nothing can be sent until the student has added bank details.
+    const noBank = await request(app).get(`/api/sponsor/sponsorships/${id}/bank-details`).set('Authorization', sponsor);
+    expect(noBank.body.error.code).toBe('BANK_DETAILS_MISSING');
+    expect((await request(app).post(`/api/sponsor/sponsorships/${id}/sent`).set('Authorization', sponsor).send({ sentOn: today(), reference: 'UTR0001' })).status).toBe(409);
+
+    const bad = await request(app).put('/api/funding/me/bank-details').set('Authorization', student).send({ accountHolderName: 'Rahul Kumar', accountNumber: ACCOUNT, ifsc: 'BAD', bankName: 'State Bank of India' });
+    expect(bad.status).toBe(400);
+    const saved = await request(app).put('/api/funding/me/bank-details').set('Authorization', student).send({ accountHolderName: 'Rahul Kumar', accountNumber: '1234 5678 9012', ifsc: 'sbin0001234', bankName: 'State Bank of India' });
+    expect(saved.status).toBe(200);
+    expect(saved.body.bankDetails).toMatchObject({ accountNumberLast4: '9012', ifsc: 'SBIN0001234' });
+    expect(JSON.stringify(saved.body)).not.toContain(ACCOUNT);
+    // Stored encrypted, never in the audit log.
+    const { BankAccount } = await import('../src/modules/sponsorship/models');
+    expect(JSON.stringify(await BankAccount.find().lean())).not.toContain(ACCOUNT);
+
+    // Only this sponsor can see the full details, and only while the money is still to be sent.
+    expect((await request(app).get(`/api/sponsor/sponsorships/${id}/bank-details`).set('Authorization', sponsor2)).status).toBe(404);
+    const bank = await request(app).get(`/api/sponsor/sponsorships/${id}/bank-details`).set('Authorization', sponsor);
+    expect(bank.body.bankDetails).toEqual({ accountHolderName: 'Rahul Kumar', accountNumber: ACCOUNT, ifsc: 'SBIN0001234', bankName: 'State Bank of India' });
+
+    const sent = await request(app).post(`/api/sponsor/sponsorships/${id}/sent`).set('Authorization', sponsor).send({ sentOn: today(), reference: 'UTR0001' });
+    expect(sent.status).toBe(200);
+    expect(sent.body.items.find((s: { id: string }) => s.id === id)).toMatchObject({ status: 'SENT', payment: { reference: 'UTR0001', toAccountLast4: '9012' } });
+    expect((await request(app).post(`/api/sponsor/sponsorships/${id}/withdraw`).set('Authorization', sponsor)).status).toBe(409);
+    // Sent money does not expire.
+    expect((await Sponsorship.findById(id).lean())!.expiresAt).toBeUndefined();
+
+    // The student reports it missing; the sponsor can then record a corrected transfer.
+    const missing = await request(app).post(`/api/funding/me/sponsorships/${id}/not-received`).set('Authorization', student).send({ note: 'Nothing in my account yet.' });
+    expect(missing.body.sponsorships.find((s: { id: string }) => s.id === id).payment.notReceived.note).toBe('Nothing in my account yet.');
+    const admins = await request(app).get('/api/sponsorships').set('Authorization', admin);
+    expect(admins.body.items[0].id).toBe(id);
+    const resent = await request(app).post(`/api/sponsor/sponsorships/${id}/sent`).set('Authorization', sponsor).send({ sentOn: today(), reference: 'UTR0002' });
+    expect(resent.body.items.find((s: { id: string }) => s.id === id).payment).toMatchObject({ reference: 'UTR0002' });
+    expect(resent.body.items.find((s: { id: string }) => s.id === id).payment.notReceived).toBeUndefined();
+
+    // Another student cannot confirm it; this student can, with no administrator involved.
+    const received = await request(app).post(`/api/funding/me/sponsorships/${id}/received`).set('Authorization', student);
+    expect(received.status).toBe(200);
+    const mine = received.body.sponsorships.find((s: { id: string }) => s.id === id);
+    expect(mine).toMatchObject({ status: 'CONFIRMED', confirmation: { byStudent: true } });
+    expect(mine.certificate.number).toMatch(/^EBC-/);
+    expect(received.body).toMatchObject({ confirmed: 50000, pledged: 0 });
+    expect((await request(app).post(`/api/funding/me/sponsorships/${id}/received`).set('Authorization', student)).status).toBe(409);
+    expect((await request(app).get(`/api/sponsor/sponsorships/${id}/bank-details`).set('Authorization', sponsor)).status).toBe(409);
+
+    const logs = JSON.stringify(await AuditLog.find({ action: { $in: ['BANK_DETAILS_SAVED', 'BANK_DETAILS_VIEWED'] } }).lean());
+    expect(logs).not.toContain(ACCOUNT);
+  });
+
   it('records every sponsorship activity in the audit log', async () => {
     const actions = await AuditLog.distinct('action');
-    for (const a of ['SPONSOR_PREFERENCES_UPDATED', 'SPONSOR_VISIBILITY_CHANGED', 'SPONSORSHIP_PLEDGED', 'SPONSORSHIP_CONFIRMED', 'SPONSORSHIP_CANCELLED', 'SPONSORSHIP_EXPIRED', 'CERTIFICATE_ISSUED', 'CERTIFICATE_REVOKED']) {
+    for (const a of ['SPONSOR_PREFERENCES_UPDATED', 'SPONSOR_VISIBILITY_CHANGED', 'SPONSORSHIP_PLEDGED', 'SPONSORSHIP_CONFIRMED', 'SPONSORSHIP_CANCELLED', 'SPONSORSHIP_EXPIRED', 'CERTIFICATE_ISSUED', 'CERTIFICATE_REVOKED', 'BANK_DETAILS_SAVED', 'BANK_DETAILS_VIEWED', 'SPONSORSHIP_SENT', 'SPONSORSHIP_NOT_RECEIVED']) {
       expect(actions).toContain(a);
     }
   });

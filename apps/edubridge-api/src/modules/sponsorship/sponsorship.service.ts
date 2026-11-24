@@ -9,10 +9,14 @@ import {
   SPONSORSHIP_STATUSES,
   matchScore,
   type ApplicationStatus,
+  type BankDetailsDTO,
+  type BankDetailsForSponsorDTO,
+  type BankDetailsInput,
   type CancelReason,
   type ConfirmSponsorshipInput,
   type EducationLevel,
   type ExpenseKey,
+  type MarkSentInput,
   type NeedLevel,
   type PledgeInput,
   type Role,
@@ -28,11 +32,12 @@ import {
 } from '@edubridge/shared';
 import { env } from '../../config/env';
 import { AppError } from '../../utils/AppError';
+import { decryptField, encryptField } from '../../utils/fieldCrypto';
 import { Application, StudentDocument, nextSequence } from '../applications/models';
 import { AUDIT_ACTIONS, audit } from '../audit/audit.service';
 import { User } from '../auth/user.model';
 import { issueCertificate, toCertificateDTO } from './certificates';
-import { Certificate, SponsorProfile, Sponsorship, type SponsorshipDoc } from './models';
+import { BankAccount, Certificate, SponsorProfile, Sponsorship, type SponsorshipDoc } from './models';
 
 type Actor = { id: string; role: Role };
 type Plain = Record<string, unknown>;
@@ -41,7 +46,9 @@ type Plain = Record<string, unknown>;
 const FUNDABLE: ApplicationStatus[] = ['APPROVED', 'PARTIALLY_FUNDED'];
 /** Approved applications, funded or not. */
 const FUNDED: ApplicationStatus[] = ['APPROVED', 'PARTIALLY_FUNDED', 'FULLY_FUNDED'];
-const ACTIVE: SponsorshipStatus[] = ['PLEDGED', 'CONFIRMED'];
+const ACTIVE: SponsorshipStatus[] = ['PLEDGED', 'SENT', 'CONFIRMED'];
+/** Active but not yet received: the amount counts as pledged. */
+const AWAITING: SponsorshipStatus[] = ['PLEDGED', 'SENT'];
 const DAY = 24 * 60 * 60 * 1000;
 
 const inr = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`;
@@ -289,13 +296,17 @@ async function toDTOs(list: SponsorshipDoc[] | Plain[], viewer: Viewer): Promise
   const items = list as unknown as (Plain & { _id: Types.ObjectId; application: Types.ObjectId; sponsor: Types.ObjectId; student: Types.ObjectId })[];
   if (!items.length) return [];
   const kind = viewer === 'STUDENT' ? 'STUDENT_AWARD' : 'SPONSOR_ACKNOWLEDGEMENT';
-  const [apps, certs, users] = await Promise.all([
+  const [apps, certs, users, banks] = await Promise.all([
     Application.find({ _id: { $in: items.map((s) => s.application) } }).select('applicationNumber profileSnapshot.education').lean(),
     Certificate.find({ sponsorship: { $in: items.map((s) => s._id) }, kind }).select('number code issuedAt revokedAt sponsorship').lean(),
     viewer === 'ADMIN'
       ? User.find({ _id: { $in: [...items.map((s) => s.sponsor), ...items.map((s) => s.student)] } }).select('fullName email').lean()
       : Promise.resolve([]),
+    viewer === 'SPONSOR'
+      ? BankAccount.find({ user: { $in: items.map((s) => s.student) } }).select('user').lean()
+      : Promise.resolve([]),
   ]);
+  const hasBank = new Set(banks.map((b) => String(b.user)));
   const appBy = new Map(apps.map((a) => [String(a._id), a]));
   const certBy = new Map(certs.map((c) => [String(c.sponsorship), c]));
   const userBy = new Map(users.map((u) => [String(u._id), u]));
@@ -305,6 +316,7 @@ async function toDTOs(list: SponsorshipDoc[] | Plain[], viewer: Viewer): Promise
     const edu = (app?.profileSnapshot as { education?: Plain } | undefined)?.education ?? {};
     const cert = certBy.get(String(s._id));
     const conf = s.confirmation as Plain | undefined;
+    const pay = s.payment as Plain | undefined;
     const canc = s.cancellation as Plain | undefined;
     const anonymous = !(s.showNameToStudent as boolean);
     const sponsorUser = userBy.get(String(s.sponsor));
@@ -317,6 +329,16 @@ async function toDTOs(list: SponsorshipDoc[] | Plain[], viewer: Viewer): Promise
       academicYear: s.academicYear as string,
       createdAt: (s.createdAt as Date).toISOString(),
       expiresAt: s.status === 'PLEDGED' && s.expiresAt ? (s.expiresAt as Date).toISOString() : undefined,
+      payment: pay?.sentOn
+        ? {
+            sentOn: pay.sentOn as string,
+            reference: pay.reference as string,
+            note: (pay.note as string) || undefined,
+            toAccountLast4: (pay.toAccountLast4 as string) || undefined,
+            notReceived: pay.notReceivedAt ? { at: (pay.notReceivedAt as Date).toISOString(), note: (pay.notReceivedNote as string) || undefined } : undefined,
+          }
+        : undefined,
+      studentBankReady: viewer === 'SPONSOR' ? hasBank.has(String(s.student)) : undefined,
       confirmedAt: conf?.at ? (conf.at as Date).toISOString() : undefined,
       cancelledAt: canc?.at ? (canc.at as Date).toISOString() : undefined,
       cancelReason: canc?.reason as CancelReason | undefined,
@@ -337,9 +359,9 @@ async function toDTOs(list: SponsorshipDoc[] | Plain[], viewer: Viewer): Promise
       },
       confirmation:
         conf && viewer !== 'STUDENT'
-          ? { receivedOn: conf.receivedOn as string, reference: conf.reference as string, note: (conf.note as string) || undefined }
+          ? { receivedOn: conf.receivedOn as string, reference: conf.reference as string, note: (conf.note as string) || undefined, byStudent: !!conf.byStudent }
           : conf
-            ? { receivedOn: conf.receivedOn as string }
+            ? { receivedOn: conf.receivedOn as string, byStudent: !!conf.byStudent }
             : undefined,
       certificate: cert ? { number: cert.number, code: cert.code, issuedAt: cert.issuedAt.toISOString(), revoked: !!cert.revokedAt } : undefined,
     };
@@ -363,7 +385,7 @@ export async function pledge(user: Actor, applicationId: string, input: PledgeIn
     throw AppError.badRequest(`You have ${inr(available)} of your budget available.`, { amount: [`At most ${inr(available)} (your available budget)`] });
   }
   if (await Sponsorship.exists({ sponsor: user.id, application: app._id, active: true })) {
-    throw AppError.conflict('You are already supporting this student. You can withdraw your pledge and pledge again while it is unconfirmed.');
+    throw AppError.conflict('You are already supporting this student. You can withdraw your pledge and pledge again until you send the money.');
   }
 
   const reference = await nextSequence('SP', 'sponsorship');
@@ -444,7 +466,7 @@ async function cancelInternal(id: unknown, reason: CancelReason, actor: Actor | 
     const filter: Plain = { _id: id, status: { $in: reason === 'BY_ADMIN' ? ACTIVE : ['PLEDGED'] } };
     if (sponsorId) filter.sponsor = sponsorId;
     const s = await Sponsorship.findOne(filter).session(session);
-    if (!s) throw AppError.conflict(sponsorId ? 'Only a pledge that has not been confirmed yet can be withdrawn' : 'This sponsorship is no longer active');
+    if (!s) throw AppError.conflict(sponsorId ? 'A pledge can only be withdrawn before the money is sent' : 'This sponsorship is no longer active');
     const wasConfirmed = s.status === 'CONFIRMED';
     s.status = 'CANCELLED';
     s.set('active', undefined);
@@ -482,7 +504,7 @@ async function cancelInternal(id: unknown, reason: CancelReason, actor: Actor | 
   }
 }
 
-/** Pledges that were not confirmed in time release their reserved amount. Runs lazily before sponsorship reads. */
+/** Pledges whose money was not sent in time release their reserved amount. Runs lazily before sponsorship reads. */
 export async function releaseExpired() {
   const due = await Sponsorship.find({ status: 'PLEDGED', expiresAt: { $lte: new Date() } }).select('_id').limit(100).lean();
   for (const s of due) {
@@ -506,25 +528,33 @@ export async function adminCancel(user: Actor, id: string, note: string | undefi
 
 /* ------------------------------------------------------ Confirmation */
 
-/** An administrator records that the pledged funds were received. Certificates are issued for both sides. */
-export async function confirm(user: Actor, id: string, input: ConfirmSponsorshipInput, req: Request) {
-  if (!isObjectId(id)) throw AppError.notFound('Sponsorship not found');
-  const today = new Date().toISOString().slice(0, 10);
-  if (input.receivedOn > today) throw AppError.badRequest('The date received cannot be in the future', { receivedOn: ['Cannot be in the future'] });
+const today = () => new Date().toISOString().slice(0, 10);
 
+/**
+ * Marks the money as received: moves it from pledged to confirmed, updates the application status
+ * and issues signed certificates to both sides. Called by the student, or by an administrator.
+ */
+async function confirmInternal(
+  filter: Plain,
+  actor: Actor,
+  details: (s: SponsorshipDoc) => { receivedOn: string; reference: string; note?: string },
+  req: Request,
+) {
+  const byStudent = actor.role === 'STUDENT';
   const result = await withTxn(async (session) => {
-    const s = await Sponsorship.findOne({ _id: id, status: 'PLEDGED' }).session(session);
-    if (!s) throw AppError.conflict('Only pledged sponsorships can be confirmed');
-    if (input.receivedOn < s.createdAt.toISOString().slice(0, 10)) {
+    const s = await Sponsorship.findOne(filter).session(session);
+    if (!s) throw AppError.conflict(byStudent ? 'Only money the sponsor has marked as sent can be confirmed' : 'This sponsorship cannot be confirmed now');
+    const d = details(s);
+    if (d.receivedOn < s.createdAt.toISOString().slice(0, 10)) {
       throw AppError.badRequest('The date received cannot be before the pledge was made', { receivedOn: ['Before the pledge date'] });
     }
     s.status = 'CONFIRMED';
     s.set('expiresAt', undefined);
-    s.set('confirmation', { receivedOn: input.receivedOn, reference: input.reference, note: input.note || undefined, by: new Types.ObjectId(user.id), at: new Date() });
+    s.set('confirmation', { receivedOn: d.receivedOn, reference: d.reference, note: d.note || undefined, by: new Types.ObjectId(actor.id), byStudent, at: new Date() });
     await s.save({ session });
     await Application.updateOne({ _id: s.application }, { $inc: { 'funding.pledged': -s.amount, 'funding.confirmed': s.amount } }, { session });
     await SponsorProfile.updateOne({ user: s.sponsor }, { $inc: { confirmed: s.amount } }, { session });
-    await syncFundingStatus(s.application, user.id, session);
+    await syncFundingStatus(s.application, actor.id, session);
 
     const app = await Application.findById(s.application).select('profileSnapshot.education').session(session).lean();
     const student = await User.findById(s.student).select('fullName').session(session).lean();
@@ -543,28 +573,160 @@ export async function confirm(user: Actor, id: string, input: ConfirmSponsorship
       { ...common, kind: 'STUDENT_AWARD', sponsorName: s.showNameToStudent ? s.sponsorName : 'An EduBridge sponsor', studentName: student?.fullName ?? 'Student', holder: s.student },
       session,
     );
-    return { reference: s.reference, amount: s.amount, certificates: [forSponsor.number, forStudent.number] };
+    return { id: String(s._id), reference: s.reference, amount: s.amount, receivedOn: d.receivedOn, paymentReference: d.reference, certificates: [forSponsor.number, forStudent.number] };
   });
 
   await audit({
-    actorId: user.id,
-    actorRole: user.role,
+    actorId: actor.id,
+    actorRole: actor.role,
     action: AUDIT_ACTIONS.SPONSORSHIP_CONFIRMED,
     resourceType: 'Sponsorship',
-    resourceId: id,
-    metadata: { reference: result.reference, amount: result.amount, receivedOn: input.receivedOn, paymentReference: input.reference },
+    resourceId: result.id,
+    metadata: { reference: result.reference, amount: result.amount, receivedOn: result.receivedOn, paymentReference: result.paymentReference, confirmedBy: byStudent ? 'STUDENT' : 'ADMIN' },
     req,
   });
   await audit({
-    actorId: user.id,
-    actorRole: user.role,
+    actorId: actor.id,
+    actorRole: actor.role,
     action: AUDIT_ACTIONS.CERTIFICATE_ISSUED,
     resourceType: 'Sponsorship',
-    resourceId: id,
+    resourceId: result.id,
     metadata: { reference: result.reference, certificates: result.certificates },
     req,
   });
+}
+
+/** An administrator records the money as received, e.g. to settle a "not received" report. */
+export async function confirm(user: Actor, id: string, input: ConfirmSponsorshipInput, req: Request) {
+  if (!isObjectId(id)) throw AppError.notFound('Sponsorship not found');
+  if (input.receivedOn > today()) throw AppError.badRequest('The date received cannot be in the future', { receivedOn: ['Cannot be in the future'] });
+  await confirmInternal({ _id: id, status: { $in: AWAITING } }, user, () => ({ receivedOn: input.receivedOn, reference: input.reference, note: input.note || undefined }), req);
   return adminSponsorship(id);
+}
+
+/* ------------------------------------------- Direct transfer to student */
+
+function toBankDTO(b: { accountHolderName: string; accountNumberLast4: string; ifsc: string; bankName: string; updatedAt: Date }): BankDetailsDTO {
+  return { accountHolderName: b.accountHolderName, accountNumberLast4: b.accountNumberLast4, ifsc: b.ifsc, bankName: b.bankName, updatedAt: b.updatedAt.toISOString() };
+}
+
+/** The student saves the bank account sponsors will send money to. */
+export async function saveBankDetails(user: Actor, input: BankDetailsInput, req: Request) {
+  const app = await latestApplication(user.id);
+  if (!app || !FUNDED.includes(app.status as ApplicationStatus)) {
+    throw AppError.conflict('You can add bank details once your application is approved');
+  }
+  const existed = await BankAccount.exists({ user: user.id });
+  await BankAccount.findOneAndUpdate(
+    { user: user.id },
+    {
+      $set: {
+        accountHolderName: input.accountHolderName,
+        accountNumberEnc: encryptField(input.accountNumber),
+        accountNumberLast4: input.accountNumber.slice(-4),
+        ifsc: input.ifsc,
+        bankName: input.bankName,
+      },
+    },
+    { upsert: true, new: true },
+  );
+  await audit({
+    actorId: user.id,
+    actorRole: user.role,
+    action: AUDIT_ACTIONS.BANK_DETAILS_SAVED,
+    resourceType: 'BankAccount',
+    resourceId: user.id,
+    metadata: { accountNumberLast4: input.accountNumber.slice(-4), ifsc: input.ifsc, updated: !!existed },
+    req,
+  });
+  return studentFunding(user);
+}
+
+/** The full bank details, shown to the sponsor only while they still have to send (or re-send) the money. Audited. */
+export async function bankDetailsForSponsor(user: Actor, id: string, req: Request): Promise<{ bankDetails: BankDetailsForSponsorDTO }> {
+  if (!isObjectId(id)) throw AppError.notFound('Sponsorship not found');
+  const s = await Sponsorship.findOne({ _id: id, sponsor: user.id }).lean();
+  if (!s) throw AppError.notFound('Sponsorship not found');
+  if (!AWAITING.includes(s.status as SponsorshipStatus)) throw AppError.conflict('Bank details are only shown while the money is still to be sent');
+  const b = await BankAccount.findOne({ user: s.student }).lean();
+  if (!b) throw new AppError(409, 'BANK_DETAILS_MISSING', 'The student has not added bank details yet');
+  await audit({
+    actorId: user.id,
+    actorRole: user.role,
+    action: AUDIT_ACTIONS.BANK_DETAILS_VIEWED,
+    resourceType: 'Sponsorship',
+    resourceId: id,
+    metadata: { reference: s.reference, accountNumberLast4: b.accountNumberLast4 },
+    req,
+  });
+  return { bankDetails: { accountHolderName: b.accountHolderName, accountNumber: decryptField(b.accountNumberEnc), ifsc: b.ifsc, bankName: b.bankName } };
+}
+
+/** The sponsor records that they transferred the money. The student then confirms it arrived. */
+export async function markSent(user: Actor, id: string, input: MarkSentInput, req: Request) {
+  if (!isObjectId(id)) throw AppError.notFound('Sponsorship not found');
+  if (input.sentOn > today()) throw AppError.badRequest('The date cannot be in the future', { sentOn: ['Cannot be in the future'] });
+  await releaseExpired();
+  const s = await Sponsorship.findOne({ _id: id, sponsor: user.id });
+  if (!s) throw AppError.notFound('Sponsorship not found');
+  // Sent again only after the student reported the first transfer as not received.
+  const resend = s.status === 'SENT' && !!s.payment?.notReceivedAt;
+  if (s.status !== 'PLEDGED' && !resend) throw AppError.conflict('This sponsorship is not waiting for a payment');
+  if (input.sentOn < s.createdAt.toISOString().slice(0, 10)) throw AppError.badRequest('The date cannot be before the pledge was made', { sentOn: ['Before the pledge date'] });
+  const b = await BankAccount.findOne({ user: s.student }).select('accountNumberLast4').lean();
+  if (!b) throw new AppError(409, 'BANK_DETAILS_MISSING', 'The student has not added bank details yet');
+
+  const updated = await Sponsorship.findOneAndUpdate(
+    { _id: id, sponsor: user.id, status: s.status },
+    {
+      $set: {
+        status: 'SENT',
+        payment: { sentOn: input.sentOn, reference: input.reference, note: input.note || undefined, toAccountLast4: b.accountNumberLast4, at: new Date() },
+      },
+      $unset: { expiresAt: 1 },
+    },
+    { new: true },
+  );
+  if (!updated) throw AppError.conflict('This sponsorship has just changed. Please reload and try again.');
+  await audit({
+    actorId: user.id,
+    actorRole: user.role,
+    action: AUDIT_ACTIONS.SPONSORSHIP_SENT,
+    resourceType: 'Sponsorship',
+    resourceId: id,
+    metadata: { reference: s.reference, amount: s.amount, sentOn: input.sentOn, paymentReference: input.reference, toAccountLast4: b.accountNumberLast4, resend },
+    req,
+  });
+  return sponsorSponsorships(user);
+}
+
+/** The student confirms the money arrived in their account. Certificates are issued. */
+export async function confirmReceived(user: Actor, id: string, req: Request) {
+  if (!isObjectId(id)) throw AppError.notFound('Sponsorship not found');
+  if (!(await Sponsorship.exists({ _id: id, student: user.id }))) throw AppError.notFound('Sponsorship not found');
+  await confirmInternal({ _id: id, student: user.id, status: 'SENT' }, user, (s) => ({ receivedOn: today(), reference: s.payment?.reference ?? '' }), req);
+  return studentFunding(user);
+}
+
+/** The student says the money has not arrived. The sponsor sees this and an administrator can follow up. */
+export async function reportNotReceived(user: Actor, id: string, note: string | undefined, req: Request) {
+  if (!isObjectId(id)) throw AppError.notFound('Sponsorship not found');
+  const s = await Sponsorship.findOneAndUpdate(
+    { _id: id, student: user.id, status: 'SENT' },
+    { $set: { 'payment.notReceivedAt': new Date(), 'payment.notReceivedNote': note || undefined } },
+    { new: true },
+  );
+  if (!s) throw AppError.conflict('Only money the sponsor has marked as sent can be reported');
+  await audit({
+    actorId: user.id,
+    actorRole: user.role,
+    action: AUDIT_ACTIONS.SPONSORSHIP_NOT_RECEIVED,
+    resourceType: 'Sponsorship',
+    resourceId: id,
+    metadata: { reference: s.reference, amount: s.amount, paymentReference: s.payment?.reference, note },
+    req,
+  });
+  return studentFunding(user);
 }
 
 /* ------------------------------------------------------------ Admin */
@@ -598,11 +760,16 @@ export async function adminList(query: unknown) {
     ]);
     filter.$or = [{ reference: rx }, { sponsorName: rx }, { student: { $in: students.map((u) => u._id) } }, { application: { $in: apps.map((a) => a._id) } }];
   }
-  // Pledges waiting for confirmation first (oldest first), then the rest by most recent.
+  // Money reported as not received first, then sponsorships still waiting for money (oldest first), then the rest.
   const [list, total] = await Promise.all([
     Sponsorship.aggregate([
       { $match: filter },
-      { $addFields: { _order: { $cond: [{ $eq: ['$status', 'PLEDGED'] }, 0, 1] }, _pledgedFirst: { $cond: [{ $eq: ['$status', 'PLEDGED'] }, '$createdAt', null] } } },
+      {
+        $addFields: {
+          _order: { $cond: [{ $ifNull: ['$payment.notReceivedAt', false] }, 0, { $cond: [{ $in: ['$status', AWAITING] }, 1, 2] }] },
+          _pledgedFirst: { $cond: [{ $in: ['$status', AWAITING] }, '$createdAt', null] },
+        },
+      },
       { $sort: { _order: 1, _pledgedFirst: 1, updatedAt: -1 } },
       { $skip: (q.page - 1) * q.limit },
       { $limit: q.limit },
@@ -622,7 +789,7 @@ export async function overview(): Promise<SponsorshipOverviewDTO> {
   const get = (s: SponsorshipStatus) => byStatus.find((b) => b._id === s);
   return {
     totals: {
-      pledged: get('PLEDGED')?.amount ?? 0,
+      pledged: (get('PLEDGED')?.amount ?? 0) + (get('SENT')?.amount ?? 0),
       confirmed: get('CONFIRMED')?.amount ?? 0,
       remaining: funded.reduce((sum, a) => sum + amounts(a).remaining, 0),
       eligibleStudents: funded.filter((a) => a.status !== 'FULLY_FUNDED').length,
@@ -646,9 +813,12 @@ export async function studentFunding(user: Actor): Promise<StudentFundingDTO> {
   if (!app) return { eligible: false, status: 'NONE', approvedAmount: 0, pledged: 0, confirmed: 0, remaining: 0, visible: false, sponsorships: [] };
   const m = amounts(app);
   // Withdrawn or expired pledges never counted towards the student's funding, so they are not shown.
-  const list = await Sponsorship.find({ application: app._id, $or: [{ status: { $in: ACTIVE } }, { 'cancellation.wasConfirmed': true }] })
-    .sort({ createdAt: -1 })
-    .lean();
+  const [list, bank] = await Promise.all([
+    Sponsorship.find({ application: app._id, $or: [{ status: { $in: ACTIVE } }, { 'cancellation.wasConfirmed': true }] })
+      .sort({ createdAt: -1 })
+      .lean(),
+    BankAccount.findOne({ user: user.id }).lean(),
+  ]);
   return {
     eligible: FUNDED.includes(app.status as ApplicationStatus),
     status: app.status,
@@ -660,6 +830,7 @@ export async function studentFunding(user: Actor): Promise<StudentFundingDTO> {
     visibleSince: app.sponsorVisibility?.visible ? app.sponsorVisibility.at.toISOString() : undefined,
     noteToSponsors: app.sponsorVisibility?.noteToSponsors || undefined,
     alias: FUNDED.includes(app.status as ApplicationStatus) ? studentAlias(app._id) : undefined,
+    bankDetails: bank ? toBankDTO(bank) : undefined,
     sponsorships: await toDTOs(list, 'STUDENT'),
   };
 }

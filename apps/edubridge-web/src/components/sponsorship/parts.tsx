@@ -13,7 +13,7 @@ import { formatDate } from '@/lib/student';
 import { daysLeft } from '@/lib/sponsorship';
 import { cn, formatINR } from '@/lib/utils';
 
-const STATUS_TONE: Record<SponsorshipStatus, BadgeTone> = { PLEDGED: 'info', CONFIRMED: 'success', CANCELLED: 'neutral' };
+const STATUS_TONE: Record<SponsorshipStatus, BadgeTone> = { PLEDGED: 'info', SENT: 'warning', CONFIRMED: 'success', CANCELLED: 'neutral' };
 
 export function SponsorshipStatusBadge({ status }: { status: SponsorshipStatus }) {
   return (
@@ -27,9 +27,16 @@ export function SponsorshipStatusBadge({ status }: { status: SponsorshipStatus }
 export function sponsorshipStatusLine(s: SponsorshipDTO) {
   if (s.status === 'PLEDGED') {
     const d = daysLeft(s.expiresAt);
-    return `Pledged ${formatDate(s.createdAt)} · awaiting confirmation of funds (${d} day${d === 1 ? '' : 's'} left)`;
+    return `Pledged ${formatDate(s.createdAt)} · money to be sent (${d} day${d === 1 ? '' : 's'} left)`;
   }
-  if (s.status === 'CONFIRMED') return `Funds received ${formatDate(s.confirmation?.receivedOn)}`;
+  if (s.status === 'SENT') {
+    return s.payment?.notReceived
+      ? `Sent ${formatDate(s.payment.sentOn)} · student reported it has not arrived`
+      : `Sent ${formatDate(s.payment?.sentOn)} · waiting for the student to confirm`;
+  }
+  if (s.status === 'CONFIRMED') {
+    return `Received ${formatDate(s.confirmation?.receivedOn)}${s.confirmation?.byStudent ? ' · confirmed by the student' : ' · confirmed by an administrator'}`;
+  }
   return `${s.cancelReason ? CANCEL_REASON_LABELS[s.cancelReason] : 'Cancelled'} · ${formatDate(s.cancelledAt)}`;
 }
 

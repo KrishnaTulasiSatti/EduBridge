@@ -17,14 +17,20 @@ import type { NeedLevel } from './assessment';
 
 /** Smallest pledge a sponsor can make. */
 export const MIN_PLEDGE = 500;
-/** A pledge reserves part of the student's requirement until an administrator confirms the funds were received. */
+/** A pledge reserves part of the student's requirement for this long; the sponsor must send the money within it. */
 export const PLEDGE_HOLD_DAYS = 14;
 
-export const SPONSORSHIP_STATUSES = ['PLEDGED', 'CONFIRMED', 'CANCELLED'] as const;
+/**
+ * PLEDGED   → the sponsor has committed; waiting for them to transfer the money to the student's bank account.
+ * SENT      → the sponsor says the money was sent; waiting for the student to confirm it arrived.
+ * CONFIRMED → the student (or an administrator) confirmed the money was received. Certificates are issued.
+ */
+export const SPONSORSHIP_STATUSES = ['PLEDGED', 'SENT', 'CONFIRMED', 'CANCELLED'] as const;
 export type SponsorshipStatus = (typeof SPONSORSHIP_STATUSES)[number];
 export const SPONSORSHIP_STATUS_LABELS: Record<SponsorshipStatus, string> = {
   PLEDGED: 'Pledged',
-  CONFIRMED: 'Confirmed',
+  SENT: 'Sent',
+  CONFIRMED: 'Received',
   CANCELLED: 'Cancelled',
 };
 
@@ -33,7 +39,7 @@ export type CancelReason = (typeof CANCEL_REASONS)[number];
 export const CANCEL_REASON_LABELS: Record<CancelReason, string> = {
   BY_SPONSOR: 'Withdrawn by the sponsor',
   BY_ADMIN: 'Cancelled by an administrator',
-  EXPIRED: `Not confirmed within ${PLEDGE_HOLD_DAYS} days`,
+  EXPIRED: `Money not sent within ${PLEDGE_HOLD_DAYS} days`,
 };
 
 /* ------------------------------------------------------- Preferences */
@@ -80,13 +86,67 @@ export const pledgeSchema = z.object({
 });
 export type PledgeInput = z.infer<typeof pledgeSchema>;
 
+const isoDate = (msg: string) => z.string().regex(/^\d{4}-\d{2}-\d{2}$/, msg);
+
+/** An administrator records the money as received (used when the student cannot, or to settle a report). */
 export const confirmSponsorshipSchema = z.object({
-  receivedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Enter the date the funds were received'),
+  receivedOn: isoDate('Enter the date the funds were received'),
   /** Bank transfer reference, receipt number or similar. */
   reference: z.string().trim().min(1, 'Enter the payment reference').max(80, 'At most 80 characters'),
   note: z.string().trim().max(500).optional().or(z.literal('')),
 });
 export type ConfirmSponsorshipInput = z.infer<typeof confirmSponsorshipSchema>;
+
+/* ----------------------------------------------- Direct bank transfer */
+
+/** The student's bank account. Sponsors transfer the money straight into it. */
+export const bankDetailsSchema = z.object({
+  accountHolderName: z.string().trim().min(2, 'Enter the name on the bank account').max(80, 'At most 80 characters'),
+  accountNumber: z
+    .string()
+    .trim()
+    .transform((v) => v.replace(/\s+/g, ''))
+    .pipe(z.string().regex(/^\d{9,18}$/, 'Enter a valid account number (9 to 18 digits)')),
+  ifsc: z
+    .string()
+    .trim()
+    .transform((v) => v.toUpperCase())
+    .pipe(z.string().regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, 'Enter a valid 11-character IFSC code, e.g. SBIN0001234')),
+  bankName: z.string().trim().min(2, 'Enter the bank name').max(80, 'At most 80 characters'),
+});
+export type BankDetailsInput = z.infer<typeof bankDetailsSchema>;
+
+/** Shown to the student: the account number is masked. */
+export interface BankDetailsDTO {
+  accountHolderName: string;
+  accountNumberLast4: string;
+  ifsc: string;
+  bankName: string;
+  updatedAt: string;
+}
+
+/** Shown to a sponsor only while they need to make the transfer. */
+export interface BankDetailsForSponsorDTO {
+  accountHolderName: string;
+  accountNumber: string;
+  ifsc: string;
+  bankName: string;
+}
+
+/** The sponsor records the transfer they made. */
+export const markSentSchema = z.object({
+  sentOn: isoDate('Enter the date you sent the money'),
+  /** Bank transfer UTR / transaction ID. */
+  reference: z.string().trim().min(4, 'Enter the transaction reference (UTR)').max(80, 'At most 80 characters'),
+  note: z.string().trim().max(500, 'At most 500 characters').optional().or(z.literal('')),
+});
+export type MarkSentInput = z.infer<typeof markSentSchema>;
+
+/** The student says the money has not arrived. An administrator follows up. */
+export const reportNotReceivedSchema = z.object({
+  note: z.string().trim().max(500, 'At most 500 characters').optional().or(z.literal('')),
+});
+export type ReportNotReceivedInput = z.infer<typeof reportNotReceivedSchema>;
 
 export const cancelSponsorshipSchema = z.object({
   reason: z.string().trim().max(500, 'At most 500 characters').optional().or(z.literal('')),
@@ -263,8 +323,20 @@ export interface SponsorshipDTO {
   /** What each side sees about the other. */
   student: { applicationId: string; alias: string; course?: string; level?: EducationLevel; name?: string; applicationNumber?: string };
   sponsor: { name: string; anonymous: boolean; email?: string };
+  /** The sponsor's record of the transfer. */
+  payment?: {
+    sentOn: string;
+    reference: string;
+    note?: string;
+    /** Last 4 digits of the account the money was sent to. */
+    toAccountLast4?: string;
+    /** Set when the student reported that the money has not arrived. */
+    notReceived?: { at: string; note?: string };
+  };
   /** Payment reference and note are shown to administrators and the sponsor only. */
-  confirmation?: { receivedOn: string; reference?: string; note?: string };
+  confirmation?: { receivedOn: string; reference?: string; note?: string; byStudent?: boolean };
+  /** Sponsor view: whether the student has added bank details, so the money can be sent. */
+  studentBankReady?: boolean;
   certificate?: CertificateRefDTO;
 }
 
@@ -279,6 +351,7 @@ export interface StudentFundingDTO {
   visibleSince?: string;
   noteToSponsors?: string;
   alias?: string;
+  bankDetails?: BankDetailsDTO;
   sponsorships: SponsorshipDTO[];
 }
 

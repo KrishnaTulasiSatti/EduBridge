@@ -40,9 +40,25 @@ const sponsorshipSchema = new Schema(
     showNameToStudent: { type: Boolean, required: true },
     messageToStudent: String,
     expiresAt: Date,
+    /** The sponsor's record of the bank transfer to the student. */
+    payment: {
+      type: new Schema(
+        {
+          sentOn: String,
+          reference: String,
+          note: String,
+          toAccountLast4: String,
+          at: Date,
+          notReceivedAt: Date,
+          notReceivedNote: String,
+        },
+        { _id: false },
+      ),
+      default: undefined,
+    },
     confirmation: {
       type: new Schema(
-        { receivedOn: String, reference: String, note: String, by: { type: Types.ObjectId, ref: 'User' }, at: Date },
+        { receivedOn: String, reference: String, note: String, by: { type: Types.ObjectId, ref: 'User' }, byStudent: Boolean, at: Date },
         { _id: false },
       ),
       default: undefined,
@@ -62,6 +78,22 @@ sponsorshipSchema.index({ status: 1, expiresAt: 1 });
 
 export const Sponsorship = model('Sponsorship', sponsorshipSchema);
 export type SponsorshipDoc = HydratedDocument<InferSchemaType<typeof sponsorshipSchema>>;
+
+/* -------------------------------------------------- Student bank account */
+
+/** Where sponsors send money. The account number is encrypted at rest (AES-256-GCM, DATA_ENCRYPTION_KEY). */
+const bankAccountSchema = new Schema(
+  {
+    user: { type: Types.ObjectId, ref: 'User', required: true, unique: true },
+    accountHolderName: { type: String, required: true },
+    accountNumberEnc: { type: String, required: true },
+    accountNumberLast4: { type: String, required: true },
+    ifsc: { type: String, required: true },
+    bankName: { type: String, required: true },
+  },
+  { timestamps: true },
+);
+export const BankAccount = model('BankAccount', bankAccountSchema);
 
 /* --------------------------------------------------------- Certificate */
 

@@ -23,7 +23,7 @@ export default defineConfig({
     // EduVault redirects back to this exact origin, so fail instead of silently moving.
     strictPort: true,
     proxy: {
-      '/api': { target: 'http://localhost:5000', changeOrigin: true },
+      '/api': { target: 'http://localhost:5001', changeOrigin: true },
     },
   },
 });
