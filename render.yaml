@@ -37,6 +37,12 @@ services:
         value: edubridge
       - key: EDUVAULT_CLIENT_SECRET
         fromService: { type: web, name: eduvault-api, envVarKey: EDUBRIDGE_CLIENT_SECRET }
+      - key: PAN_REGISTRY_URL # e.g. https://pan-registry-api.onrender.com
+        sync: false
+      - key: PAN_REGISTRY_CLIENT_ID
+        value: edubridge
+      - key: PAN_REGISTRY_CLIENT_SECRET
+        fromService: { type: web, name: pan-registry-api, envVarKey: EDUBRIDGE_CLIENT_SECRET }
       - key: ML_SERVICE_URL # e.g. https://edubridge-ml.onrender.com
         sync: false
       - key: ML_SERVICE_TOKEN
@@ -101,6 +107,45 @@ services:
       - type: rewrite
         source: /*
         destination: /index.html
+
+  # ------------------------------------------------- PAN Registry (simulation)
+  - type: web
+    name: pan-registry-api
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm ci --workspace=@panregistry/api --include=dev && npm run build -w @panregistry/api
+    startCommand: npm run start -w @panregistry/api
+    healthCheckPath: /api/health
+    buildFilter:
+      paths: [apps/pan-registry-api/**, package.json, package-lock.json]
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: NODE_ENV
+        value: production
+      - key: MONGOMS_DISABLE_POSTINSTALL
+        value: 1
+      - key: MONGODB_URI # the same Atlas cluster
+        sync: false
+      - key: MONGODB_DB
+        value: panregistry
+      - key: ADMIN_KEY
+        generateValue: true
+      - key: EDUBRIDGE_CLIENT_ID
+        value: edubridge
+      - key: EDUBRIDGE_CLIENT_SECRET
+        generateValue: true
+      - key: SMTP_HOST # e.g. smtp.gmail.com
+        sync: false
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS # a Gmail app password
+        sync: false
+      - key: MAIL_FROM
+        sync: false
 
   # -------------------------------------------------------------- ML need service
   - type: web

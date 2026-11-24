@@ -13,9 +13,28 @@ const userSchema = new Schema(
     lockedUntil: { type: Date, select: false },
     lastLoginAt: { type: Date },
     consentAcceptedAt: { type: Date, required: true },
+    /** Sponsors: PAN checked against the PAN registry with an OTP before the account was created. */
+    panVerification: {
+      type: new Schema(
+        {
+          /** AES-256-GCM encrypted PAN. */
+          panEncrypted: { type: String, required: true, select: false },
+          /** HMAC of the PAN: one sponsor account per PAN. */
+          panHash: { type: String, required: true, select: false },
+          maskedPan: { type: String, required: true },
+          holderType: { type: String },
+          registryReference: { type: String, required: true },
+          verifiedAt: { type: Date, required: true },
+        },
+        { _id: false },
+      ),
+      required: false,
+    },
   },
   { timestamps: true },
 );
+
+userSchema.index({ 'panVerification.panHash': 1 }, { unique: true, partialFilterExpression: { 'panVerification.panHash': { $exists: true } } });
 
 export type UserDoc = HydratedDocument<InferSchemaType<typeof userSchema>>;
 
@@ -29,6 +48,9 @@ export function toPublicUser(u: UserDoc): PublicUser {
     status: u.status,
     createdAt: u.createdAt.toISOString(),
     lastLoginAt: u.lastLoginAt?.toISOString(),
+    panVerification: u.panVerification
+      ? { maskedPan: u.panVerification.maskedPan, verifiedAt: u.panVerification.verifiedAt.toISOString() }
+      : undefined,
   };
 }
 

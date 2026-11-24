@@ -6,6 +6,7 @@ import { connectDB, disconnectDB } from '../src/config/db';
 import { Application } from '../src/modules/applications/models';
 import { AuditLog } from '../src/modules/audit/audit.model';
 import { mlClient } from '../src/modules/assessment/mlClient';
+import { issuePanTokenForTests } from '../src/modules/auth/sponsorPan.service';
 import { vaultClient } from '../src/modules/eduvault/vaultClient';
 import { Certificate, Sponsorship } from '../src/modules/sponsorship/models';
 import { DEMO_PASSWORD, seedDemoUsers } from './fixtures';
@@ -40,7 +41,14 @@ beforeAll(async () => {
   await seedDemoUsers();
   const volunteer = await login('volunteer@edubridge.test');
   [student, admin, sponsor] = await Promise.all([login('student@edubridge.test'), login('admin@edubridge.test'), login('sponsor@edubridge.test')]);
-  const reg = await request(app).post('/api/auth/register').send({ fullName: 'Kavya Nair', email: 'kavya@sponsor.test', password: DEMO_PASSWORD, role: 'SPONSOR', acceptTerms: true });
+  const reg = await request(app).post('/api/auth/register').send({
+    fullName: 'Kavya Nair',
+    email: 'kavya@sponsor.test',
+    password: DEMO_PASSWORD,
+    role: 'SPONSOR',
+    acceptTerms: true,
+    panToken: issuePanTokenForTests('AAAPN1234K', 'Kavya Nair'),
+  });
   sponsor2 = `Bearer ${reg.body.accessToken}`;
 
   await request(app).post('/api/applications/current').set('Authorization', student);

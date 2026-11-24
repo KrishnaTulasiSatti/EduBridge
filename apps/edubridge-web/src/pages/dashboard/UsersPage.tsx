@@ -120,7 +120,14 @@ export default function UsersPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-5 py-3 text-muted-foreground">{ROLE_LABELS[u.role]}</td>
+                  <td className="px-5 py-3 text-muted-foreground">
+                    {ROLE_LABELS[u.role]}
+                    {u.panVerification && (
+                      <span className="block text-[13px] text-subtle" title={`Verified ${formatDate(u.panVerification.verifiedAt)}`}>
+                        PAN verified · {u.panVerification.maskedPan}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-5 py-3">
                     <Badge tone={statusTone[u.status]}>
                       <Dot /> {statusLabel[u.status]}

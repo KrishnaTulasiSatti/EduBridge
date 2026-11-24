@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PAN Registry · Records</title>
+    <link rel="stylesheet" href="/admin.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="wrap">
+        <p class="brand">PAN Registry <span class="tag">Simulation</span></p>
+        <p class="note">A practice registry for the EduBridge project. It is not connected to the Income Tax Department. Use made-up records only.</p>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <section id="signin" class="card narrow">
+        <h1>Sign in</h1>
+        <p class="muted">Enter the registry admin key (ADMIN_KEY in the registry's .env file).</p>
+        <form id="signin-form">
+          <label for="admin-key">Admin key</label>
+          <input id="admin-key" type="password" autocomplete="current-password" required />
+          <p class="error" id="signin-error" hidden></p>
+          <button type="submit">Continue</button>
+        </form>
+      </section>
+
+      <div id="app" hidden>
+        <div class="bar">
+          <h1>PAN records</h1>
+          <button type="button" class="link" id="signout">Sign out</button>
+        </div>
+
+        <section class="card">
+          <h2>Add a record</h2>
+          <form id="add-form" class="grid">
+            <div>
+              <label for="pan">PAN</label>
+              <input id="pan" name="pan" maxlength="10" placeholder="ABCPK1234L" required />
+            </div>
+            <div>
+              <label for="fullName">Name as on PAN card</label>
+              <input id="fullName" name="fullName" required />
+            </div>
+            <div>
+              <label for="dateOfBirth">Date of birth</label>
+              <input id="dateOfBirth" name="dateOfBirth" type="date" required />
+            </div>
+            <div>
+              <label for="email">Email for codes</label>
+              <input id="email" name="email" type="email" required />
+            </div>
+            <div>
+              <label for="mobile">Mobile <span class="muted">(optional)</span></label>
+              <input id="mobile" name="mobile" inputmode="numeric" maxlength="10" />
+            </div>
+            <div class="end">
+              <button type="submit">Add record</button>
+            </div>
+          </form>
+          <p class="error" id="add-error" hidden></p>
+          <p class="hint">The 4th letter of a PAN is the holder type: P individual, C company, T trust, F firm, H HUF. The one-time password goes to the email saved here.</p>
+        </section>
+
+        <section class="card">
+          <div class="bar">
+            <h2>Records</h2>
+            <input id="search" type="search" placeholder="Search PAN or name" />
+          </div>
+          <div class="table">
+            <table>
+              <thead>
+                <tr><th>PAN</th><th>Name</th><th>Date of birth</th><th>Email</th><th>Status</th><th></th></tr>
+              </thead>
+              <tbody id="records"></tbody>
+            </table>
+          </div>
+          <p class="muted empty" id="records-empty" hidden>No records yet. Add one above.</p>
+        </section>
+
+        <section class="card">
+          <div class="bar">
+            <h2>Recent verifications</h2>
+            <button type="button" class="link" id="refresh-activity">Refresh</button>
+          </div>
+          <div class="table">
+            <table>
+              <thead>
+                <tr><th>When</th><th>PAN</th><th>Partner</th><th>Result</th><th>Tries</th></tr>
+              </thead>
+              <tbody id="activity"></tbody>
+            </table>
+          </div>
+          <p class="muted empty" id="activity-empty" hidden>No verifications in the last 24 hours.</p>
+        </section>
+      </div>
+    </main>
+    <script src="/admin.js"></script>
+  </body>
+</html>

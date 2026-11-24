@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { registerSchema, SELF_REGISTER_ROLES, type RegisterInput, type SelfRegisterRole } from '@edubridge/shared';
+import { SponsorPanCheck, type VerifiedPan } from '@/components/auth/SponsorPanCheck';
 import { Alert } from '@/components/ui/alert';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Checkbox, Field, Input } from '@/components/ui/input';
@@ -24,7 +25,7 @@ const asides: Record<SelfRegisterRole, { title: string; text: string }> = {
   },
   SPONSOR: {
     title: 'Support students you can trust.',
-    text: 'Every student you see has verified documents and has been approved by an administrator. Every contribution is recorded.',
+    text: 'Every student you see has verified documents and has been approved by an administrator. Sponsors verify their PAN when they sign up, and every contribution is recorded.',
   },
   VOLUNTEER: {
     title: 'Be the careful second look.',
@@ -48,6 +49,8 @@ export default function RegisterPage() {
     : 'STUDENT';
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [verifiedPan, setVerifiedPan] = useState<VerifiedPan | null>(null);
+  const [panError, setPanError] = useState<string | undefined>();
 
   const {
     register,
@@ -55,6 +58,7 @@ export default function RegisterPage() {
     watch,
     setValue,
     setError,
+    clearErrors,
     formState: { errors, isSubmitting },
   } = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
@@ -63,11 +67,18 @@ export default function RegisterPage() {
 
   const role = watch('role');
   const password = watch('password') ?? '';
+  const fullName = watch('fullName') ?? '';
+  const isSponsor = role === 'SPONSOR';
 
   const onSubmit = async (values: RegisterInput) => {
     setFormError(null);
+    setPanError(undefined);
+    if (isSponsor && !verifiedPan) {
+      setPanError('Verify your PAN before creating your account.');
+      return;
+    }
     try {
-      const res = await registerUser(values);
+      const res = await registerUser({ ...values, panToken: isSponsor ? verifiedPan?.panToken : undefined });
       if (res.pendingApproval) {
         setPending(true);
         return;
@@ -75,6 +86,12 @@ export default function RegisterPage() {
       navigate('/dashboard', { replace: true });
     } catch (err) {
       const fields = getFieldErrors(err);
+      if (fields?.panToken) {
+        // The verification expired or was already used: verify again.
+        setVerifiedPan(null);
+        setPanError(fields.panToken[0]);
+        return;
+      }
       if (fields) Object.entries(fields).forEach(([k, v]) => setError(k as keyof RegisterInput, { message: v[0] }));
       setFormError(getErrorMessage(err));
     }
@@ -134,9 +151,35 @@ export default function RegisterPage() {
           </div>
         </fieldset>
 
-        <Field label="Full name" htmlFor="fullName" error={errors.fullName?.message} hint={role === 'STUDENT' ? 'As it appears on your college ID' : undefined}>
-          <Input id="fullName" autoComplete="name" invalid={!!errors.fullName} {...register('fullName')} />
+        <Field
+          label="Full name"
+          htmlFor="fullName"
+          error={errors.fullName?.message}
+          hint={role === 'STUDENT' ? 'As it appears on your college ID' : isSponsor ? 'As printed on your PAN card' : undefined}
+        >
+          <Input
+            id="fullName"
+            autoComplete="name"
+            invalid={!!errors.fullName}
+            readOnly={isSponsor && !!verifiedPan}
+            {...register('fullName')}
+          />
         </Field>
+
+        {isSponsor && (
+          <SponsorPanCheck
+            fullName={fullName}
+            verified={verifiedPan}
+            error={panError}
+            onVerified={(v) => {
+              setVerifiedPan(v);
+              setPanError(undefined);
+              clearErrors('fullName');
+            }}
+            onReset={() => setVerifiedPan(null)}
+            onNameError={(message) => setError('fullName', { message })}
+          />
+        )}
         <Field label="Email" htmlFor="email" error={errors.email?.message}>
           <Input id="email" type="email" autoComplete="email" invalid={!!errors.email} {...register('email')} />
         </Field>

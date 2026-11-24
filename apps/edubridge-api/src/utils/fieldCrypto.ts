@@ -18,6 +18,14 @@ export function encryptField(plain: string) {
   return ['v1', iv.toString('base64url'), cipher.getAuthTag().toString('base64url'), data.toString('base64url')].join('.');
 }
 
+/**
+ * Keyed hash (HMAC-SHA256) of a value, so the database can enforce "one account per PAN"
+ * without storing the PAN in a searchable form.
+ */
+export function blindIndex(value: string) {
+  return crypto.createHmac('sha256', key()).update(`blind-index:${value}`).digest('hex');
+}
+
 export function decryptField(stored: string) {
   const [version, iv, tag, data] = stored.split('.');
   if (version !== 'v1' || !iv || !tag || !data) throw new Error('Unrecognised encrypted value');

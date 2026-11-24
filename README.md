@@ -14,6 +14,7 @@ apps/
   eduvault-web    React + Tailwind — simulated DigiLocker-style document locker
   eduvault-api    Express + Mongoose — institutions, Ed25519 signing, consent, one-time sharing
   ml-service      Python + FastAPI + scikit-learn need-assessment model (experimental second opinion)
+  pan-registry-api Express + Mongoose — simulated PAN registry that verifies sponsors with an email OTP
 packages/
   shared          Zod schemas and TypeScript types shared by EduBridge web and api
   eduvault-shared EduVault schemas, signed-document format and canonical JSON (used by both APIs)
@@ -29,7 +30,7 @@ npm run ml:setup   # once: creates apps/ml-service/.venv and installs the Python
 npm run dev
 ```
 
-`npm run dev` starts all five apps. Each port is fixed (Vite fails instead of moving), because EduVault redirects back to an exact address.
+`npm run dev` starts all six apps. Each port is fixed (Vite fails instead of moving), because EduVault redirects back to an exact address.
 
 | App            | URL                                  |
 | -------------- | ------------------------------------ |
@@ -38,6 +39,7 @@ npm run dev
 | EduVault web   | http://localhost:5174                |
 | EduVault API   | http://localhost:5100/api/health     |
 | ML service     | http://127.0.0.1:8000/health         |
+| PAN Registry   | http://localhost:5200 (records page) |
 
 No database setup is needed for development. When `MONGODB_URI` in `apps/edubridge-api/.env` is empty, the API starts an
 in-memory MongoDB and creates the administrator. The data resets on every restart. The first run downloads a MongoDB binary (~600 MB, one time).
@@ -60,6 +62,7 @@ Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in the app's `.env` **before** the first 
 (required in production). An existing administrator is never changed by the seed.
 
 - **Students, sponsors and volunteers** register at http://localhost:5173/register. Volunteers stay pending until the admin approves them (*Users*).
+- **Sponsors** verify their PAN while signing up, so their PAN must first be added on the PAN Registry records page (see *Sponsor PAN verification* below).
 - **Institutions** register on EduVault (http://localhost:5174) and stay pending until the EduVault admin approves them.
 - **Students' EduVault accounts** are activated with the one-time code their institution gives them when enrolling them.
 
@@ -222,6 +225,34 @@ A separate, clearly labelled simulation of a DigiLocker-style locker. It is not 
 - **Document retention**: files of applications that were **not approved** are deleted `DOCUMENT_RETENTION_DAYS` after the decision
   (default 180). The record, SHA-256 fingerprint and verification results are kept; opening the file returns *410 Gone*. The job runs
   at start-up and daily and is audited. (Aadhaar numbers are already deleted at any final decision.)
+
+## Sponsor PAN verification
+
+Sponsors cannot create an account until their PAN is verified. The check runs against **PAN Registry**
+(`apps/pan-registry-api`, port 5200). It is a clearly labelled **simulation** built for this project, in the same spirit
+as EduVault. It is **not** connected to the Income Tax Department, and it must only hold made-up records.
+
+1. The registry administrator opens http://localhost:5200, signs in with `ADMIN_KEY` and adds a record: PAN, name as on the
+   PAN card, date of birth and the email where codes are sent. Records can be deactivated (e.g. "PAN cancelled") or deleted.
+2. On EduBridge's sign-up page the sponsor enters their name, PAN and date of birth and clicks **Send code**.
+3. EduBridge's server asks the registry (partner ID and secret, server-to-server). The registry checks the PAN format, that
+   the PAN exists and is active, and that the name (ignoring case, dots and spaces) and date of birth match. If they do, it emails a
+   **6-digit OTP to the address registered for that PAN**, never to an address the sponsor typed.
+4. The sponsor enters the code. The OTP is stored only as a SHA-256 hash, is valid for **10 minutes**, allows **5 tries**
+   and can be used **once**. A PAN can receive at most 3 codes in 15 minutes.
+5. EduBridge then gives the browser a **signed PAN token** (HS256, 30 minutes) and the sign-up form unlocks. The account name must match the PAN name.
+6. The sponsor account stores the PAN **encrypted** (AES-256-GCM), a keyed hash (HMAC-SHA256) that allows **one sponsor account
+   per PAN**, the masked PAN (`XXXXXX234L`) and the registry reference. Admins see "PAN verified · XXXXXX234L" on *Users*.
+
+Results the registry can return: `OTP_SENT`, `NOT_FOUND`, `INACTIVE`, `NAME_MISMATCH`, `DOB_MISMATCH`, `INVALID_FORMAT`;
+and for the code: `VERIFIED`, `INVALID_OTP`, `EXPIRED`, `TOO_MANY_ATTEMPTS`, `ALREADY_USED`. Every step is in EduBridge's audit log.
+
+**Setup.** Copy `apps/pan-registry-api/.env.example` to `.env`, set `ADMIN_KEY` and `EDUBRIDGE_CLIENT_SECRET`, and put the same
+secret in `PAN_REGISTRY_CLIENT_SECRET` in `apps/edubridge-api/.env`. Without SMTP settings (development), codes are printed in the
+registry's console. To send real emails with Gmail set `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=587`, `SMTP_USER` and a Gmail
+**app password** in `SMTP_PASS`. Set `MONGODB_URI` to keep records between restarts (the registry uses its own `panregistry` database).
+
+**Going live.** Replace the registry with a licensed PAN verification provider. Only `panClient.ts` in the EduBridge API needs to change.
 
 ## Deploying the web app on Vercel
 

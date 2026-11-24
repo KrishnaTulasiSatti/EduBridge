@@ -7,6 +7,7 @@ import { AppError } from '../../utils/AppError';
 import { generateRefreshToken, hashToken, signAccessToken } from '../../utils/tokens';
 import { AUDIT_ACTIONS, audit } from '../audit/audit.service';
 import { RefreshToken } from './refreshToken.model';
+import { readPanToken } from './sponsorPan.service';
 import { User, type UserDoc } from './user.model';
 
 const MAX_FAILED_ATTEMPTS = 5;
@@ -44,16 +45,30 @@ export async function register(input: ParsedRegister, req: Request) {
   const exists = await User.exists({ email: input.email });
   if (exists) throw AppError.conflict('An account with this email already exists');
 
-  const user = await User.create({
-    fullName: input.fullName,
-    email: input.email,
-    phone: input.phone,
-    passwordHash: await hashPassword(input.password),
-    role: input.role,
-    // Volunteers handle sensitive documents, so an admin must activate them first.
-    status: input.role === 'VOLUNTEER' ? 'PENDING_APPROVAL' : 'ACTIVE',
-    consentAcceptedAt: new Date(),
-  });
+  // Sponsors must have verified their PAN with an OTP from the PAN registry first.
+  const panVerification = input.role === 'SPONSOR' ? await readPanToken(input.panToken, input.fullName) : undefined;
+
+  let user: UserDoc;
+  try {
+    user = await User.create({
+      fullName: input.fullName,
+      email: input.email,
+      phone: input.phone,
+      passwordHash: await hashPassword(input.password),
+      role: input.role,
+      // Volunteers handle sensitive documents, so an admin must activate them first.
+      status: input.role === 'VOLUNTEER' ? 'PENDING_APPROVAL' : 'ACTIVE',
+      consentAcceptedAt: new Date(),
+      panVerification,
+    });
+  } catch (err) {
+    // Two sign-ups racing with the same email or PAN: the unique indexes decide.
+    if ((err as { code?: number }).code === 11000) {
+      const byPan = JSON.stringify((err as { keyPattern?: unknown }).keyPattern ?? '').includes('panHash');
+      throw AppError.conflict(byPan ? 'This PAN is already linked to an EduBridge sponsor account.' : 'An account with this email already exists');
+    }
+    throw err;
+  }
 
   await audit({
     actorId: user.id,
@@ -61,7 +76,7 @@ export async function register(input: ParsedRegister, req: Request) {
     action: AUDIT_ACTIONS.USER_REGISTERED,
     resourceType: 'User',
     resourceId: user.id,
-    metadata: { role: user.role },
+    metadata: { role: user.role, maskedPan: user.panVerification?.maskedPan },
     req,
   });
 

@@ -13,6 +13,10 @@ const envSchema = z.object({
   EDUVAULT_API_URL: z.string().url().default('http://localhost:5100'),
   EDUVAULT_CLIENT_ID: z.string().default('edubridge'),
   EDUVAULT_CLIENT_SECRET: z.string().optional().default(''),
+  /** PAN Registry (simulation) used to verify sponsors' PAN with an OTP. */
+  PAN_REGISTRY_URL: z.string().url().default('http://localhost:5200'),
+  PAN_REGISTRY_CLIENT_ID: z.string().default('edubridge'),
+  PAN_REGISTRY_CLIENT_SECRET: z.string().optional().default(''),
   ML_SERVICE_URL: z.string().url().default('http://127.0.0.1:8000'),
   ML_SERVICE_TOKEN: z.string().optional().default(''),
   /** 32-byte key (64 hex characters) used to encrypt sensitive fields such as Aadhaar numbers. */

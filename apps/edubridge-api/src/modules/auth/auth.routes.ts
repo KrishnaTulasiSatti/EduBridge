@@ -1,11 +1,12 @@
 import { Router, type CookieOptions, type Response } from 'express';
 import rateLimit from 'express-rate-limit';
-import { loginSchema, registerSchema } from '@edubridge/shared';
+import { loginSchema, registerSchema, sponsorPanConfirmSchema, sponsorPanStartSchema } from '@edubridge/shared';
 import { env, isProd } from '../../config/env';
 import { authenticate } from '../../middleware/auth';
 import { validateBody } from '../../middleware/validate';
 import { AppError } from '../../utils/AppError';
 import * as authService from './auth.service';
+import { confirmSponsorPan, startSponsorPan } from './sponsorPan.service';
 import { User, toPublicUser } from './user.model';
 
 export const REFRESH_COOKIE = 'eb_refresh';
@@ -42,6 +43,16 @@ authRouter.post('/register', authLimiter, validateBody(registerSchema), async (r
   }
   setRefreshCookie(res, tokens.refreshToken);
   res.status(201).json({ user: toPublicUser(user), accessToken: tokens.accessToken });
+});
+
+/** Sponsor sign-up, step 1: match PAN, name and date of birth with the PAN registry; it emails an OTP. */
+authRouter.post('/sponsor-pan/start', authLimiter, validateBody(sponsorPanStartSchema), async (req, res) => {
+  res.json(await startSponsorPan(req.body, req));
+});
+
+/** Sponsor sign-up, step 2: check the OTP; returns a short-lived PAN token used by /register. */
+authRouter.post('/sponsor-pan/confirm', authLimiter, validateBody(sponsorPanConfirmSchema), async (req, res) => {
+  res.json(await confirmSponsorPan(req.body, req));
 });
 
 authRouter.post('/login', authLimiter, validateBody(loginSchema), async (req, res) => {
