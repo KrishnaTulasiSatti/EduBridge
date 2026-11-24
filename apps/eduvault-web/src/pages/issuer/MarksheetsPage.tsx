@@ -78,7 +78,7 @@ export default function MarksheetsPage() {
         ) : data.items.length === 0 ? (
           <EmptyState icon={FileCheck2} title={query || status !== 'ALL' ? 'No matching marksheets' : 'No marksheets yet'} />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto scrollbar-soft">
             <table className="w-full min-w-[680px] text-sm">
               <thead className="border-b border-border text-left text-[13px] text-muted-foreground">
                 <tr>

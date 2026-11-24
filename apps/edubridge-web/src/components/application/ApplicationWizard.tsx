@@ -77,7 +77,7 @@ export function ApplicationWizard({
   return (
     <div className="grid gap-8 lg:grid-cols-[220px_minmax(0,1fr)]">
       <nav aria-label="Application steps" className="lg:sticky lg:top-8 lg:self-start">
-        <ol className="flex gap-1 overflow-x-auto pb-1 scrollbar-thin lg:flex-col lg:overflow-visible">
+        <ol className="flex gap-1 overflow-x-auto pb-1 scrollbar-soft lg:flex-col lg:overflow-visible">
           {STEPS.map((s, i) => {
             const done = s.id !== 'review' && completion[s.id as SectionId];
             const active = s.id === stepId;

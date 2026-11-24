@@ -11,7 +11,7 @@ export function AuthLayout({ children, aside }: { children: ReactNode; aside?: {
     <div className="grid min-h-dvh lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
       <aside className="relative hidden flex-col justify-between bg-[#2f5d50] p-12 text-[#f7f6f2] lg:flex">
         <Logo inverted />
-        <div className="max-w-sm">
+        <div className="max-w-sm stagger">
           <p className="font-display text-[32px] font-medium leading-[1.2]">{copy.title}</p>
           <p className="mt-5 text-[15px] leading-relaxed text-[#f7f6f2]/70">{copy.text}</p>
         </div>
@@ -26,7 +26,7 @@ export function AuthLayout({ children, aside }: { children: ReactNode; aside?: {
           <ThemeToggle />
         </div>
         <div className="flex flex-1 items-start justify-center px-5 pb-16 pt-6 sm:items-center sm:px-8 sm:pt-0">
-          <div className="w-full max-w-[400px] animate-fade-in">{children}</div>
+          <div className="w-full max-w-[400px] animate-fade-up">{children}</div>
         </div>
       </main>
     </div>

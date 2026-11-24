@@ -301,7 +301,7 @@ export function DocumentCard({
                 <div className="w-full max-w-xs">
                   <p className="text-sm text-muted-foreground">Uploading… {progress}%</p>
                   <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-border">
-                    <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${progress}%` }} />
+                    <div className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out" style={{ width: `${progress}%` }} />
                   </div>
                 </div>
               ) : (

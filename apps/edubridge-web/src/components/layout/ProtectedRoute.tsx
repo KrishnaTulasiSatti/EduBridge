@@ -1,16 +1,10 @@
-import { Loader2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import type { Role } from '@edubridge/shared';
+import { FullPageLoader } from '@/components/ui/loaders';
 import { useAuth } from '@/context/AuthContext';
 
-export function FullPageLoader() {
-  return (
-    <div className="grid min-h-dvh place-items-center">
-      <Loader2 className="size-5 animate-spin text-subtle" aria-label="Loading" />
-    </div>
-  );
-}
+export { FullPageLoader };
 
 export function ProtectedRoute({ children, roles }: { children: ReactNode; roles?: Role[] }) {
   const { user, initializing } = useAuth();

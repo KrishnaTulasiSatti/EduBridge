@@ -66,7 +66,12 @@ export function StatusTracker({ application }: { application: ApplicationDTO }) 
             {i < STAGES.length - 1 && (
               <span className={cn('absolute left-[13px] top-8 bottom-1 w-px', isDone ? 'bg-primary/50' : 'bg-border')} aria-hidden />
             )}
-            <span className={cn('relative z-10 grid size-7 shrink-0 place-items-center rounded-full', ring)}>{icon}</span>
+            <span className={cn('relative z-10 grid size-7 shrink-0 place-items-center rounded-full', ring)}>
+              {isCurrent && !rejected && !onHold && (
+                <span className="absolute inset-0 rounded-full bg-primary/30 [animation:soft-ping_2.4s_var(--ease-out)_infinite]" aria-hidden />
+              )}
+              <span className="relative grid place-items-center">{icon}</span>
+            </span>
             <div className="min-w-0 pt-0.5">
               <p className={cn('text-[15px]', isDone || isCurrent || rejected || onHold ? 'font-medium text-foreground' : 'text-muted-foreground')}>
                 {rejected ? 'Not approved' : stage.title}

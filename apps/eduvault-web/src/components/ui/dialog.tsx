@@ -33,8 +33,8 @@ export function Dialog({
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center" role="dialog" aria-modal="true" aria-label={title}>
-      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-      <div className={cn('relative w-full max-w-md rounded-xl border border-border bg-surface shadow-pop animate-fade-in', className)}>
+      <div className="absolute inset-0 bg-black/30 animate-fade" onClick={onClose} />
+      <div className={cn('relative w-full max-w-md rounded-xl border border-border bg-surface shadow-pop animate-scale-in', className)}>
         <div className="flex items-start justify-between gap-4 px-6 pt-5">
           <div>
             <h2 className="text-[17px] font-semibold">{title}</h2>

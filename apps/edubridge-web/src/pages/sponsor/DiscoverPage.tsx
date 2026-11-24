@@ -29,7 +29,7 @@ export function yearOf(s: Pick<SponsorStudentCardDTO, 'currentYear' | 'durationY
 function StudentCard({ s }: { s: SponsorStudentCardDTO }) {
   const strongest = [...s.match.factors].filter((f) => f.value >= 0.99 && !f.detail.startsWith('You ')).slice(0, 2);
   return (
-    <Card className="flex flex-col">
+    <Card className="flex flex-col transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-border-strong hover:shadow-pop">
       <div className="flex items-start justify-between gap-4 px-5 pt-5">
         <div className="min-w-0">
           <p className="font-medium">{s.alias}</p>

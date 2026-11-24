@@ -14,7 +14,7 @@ import {
   type QueueScope,
 } from '@edubridge/shared';
 import { ApplicationStatusBadge } from '@/components/application/status';
-import { EmptyState, PageHeader } from '@/components/dashboard/widgets';
+import { EmptyState, PageHeader, SkeletonRows } from '@/components/dashboard/widgets';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -151,7 +151,7 @@ export default function QueuePage({
           </div>
         )}
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto scrollbar-soft">
           <table className="w-full min-w-[860px] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-[13px] text-muted-foreground">
@@ -164,8 +164,9 @@ export default function QueuePage({
               </tr>
             </thead>
             <tbody className={cn('transition-opacity', loading && 'opacity-60')}>
+              {!data && !error && <SkeletonRows cols={6} />}
               {data?.items.map((a) => (
-                <tr key={a.id} className="border-b border-border last:border-0 hover:bg-sunken/50">
+                <tr key={a.id} className="border-b border-border last:border-0 transition-colors duration-150 hover:bg-sunken/50">
                   <td className="px-5 py-3.5">
                     <p className="font-medium">{a.studentName}</p>
                     <p className="text-[13px] text-subtle">

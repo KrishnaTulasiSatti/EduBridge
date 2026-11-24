@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { Logo } from '@/components/brand/Logo';
 import { BridgeArt } from '@/components/landing/BridgeArt';
 import { Navbar } from '@/components/landing/Navbar';
+import { Reveal } from '@/components/motion/Reveal';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -17,11 +18,11 @@ function Section({ id, className, children }: { id?: string; className?: string;
 
 function Heading({ eyebrow, title, text, className }: { eyebrow?: string; title: string; text?: string; className?: string }) {
   return (
-    <div className={cn('max-w-2xl', className)}>
+    <Reveal className={cn('max-w-2xl', className)}>
       {eyebrow && <p className="text-sm font-medium text-primary-ink">{eyebrow}</p>}
       <h2 className="mt-2 font-display text-[34px] font-medium leading-[1.15] text-balance sm:text-[40px]">{title}</h2>
       {text && <p className="mt-4 text-[17px] leading-relaxed text-muted-foreground text-pretty">{text}</p>}
-    </div>
+    </Reveal>
   );
 }
 
@@ -110,9 +111,9 @@ export default function LandingPage() {
         {/* Hero */}
         <section className="px-5 pb-16 pt-14 sm:px-8 lg:pb-24 lg:pt-20">
           <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
-            <div>
+            <div className="stagger">
               <p className="text-sm font-medium text-primary-ink">Educational sponsorship, handled with care</p>
-              <h1 className="mt-4 font-display text-[42px] font-medium leading-[1.08] text-balance sm:text-[54px] lg:text-[60px]">
+              <h1 className="mt-4 font-display text-[36px] font-medium leading-[1.08] text-balance min-[400px]:text-[42px] sm:text-[54px] lg:text-[60px]">
                 Helping deserving students continue their education.
               </h1>
               <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground text-pretty">
@@ -142,11 +143,11 @@ export default function LandingPage() {
               ['Checked at the source', 'Documents are verified with issuing institutions and official portals, not taken at face value.'],
               ['Decided by people', 'Volunteers review every application and an administrator makes each final decision.'],
               ['Accounted for', 'Promised support never exceeds a student’s approved need, and every connection is recorded.'],
-            ].map(([t, d]) => (
-              <div key={t} className="py-8 md:px-8 md:first:pl-0 md:last:pr-0">
+            ].map(([t, d], i) => (
+              <Reveal key={t} delay={i * 90} className="py-8 md:px-8 md:first:pl-0 md:last:pr-0">
                 <p className="font-display text-xl font-medium">{t}</p>
                 <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">{d}</p>
-              </div>
+              </Reveal>
             ))}
           </div>
         </section>
@@ -160,11 +161,11 @@ export default function LandingPage() {
           />
           <ol className="mt-14 grid gap-x-12 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
             {steps.map((s, i) => (
-              <li key={s.title} className="border-t border-border-strong pt-5">
-                <span className="font-display text-[15px] text-subtle">{String(i + 1).padStart(2, '0')}</span>
+              <Reveal as="li" key={s.title} delay={(i % 3) * 90} className="group border-t border-border-strong pt-5">
+                <span className="font-display text-[15px] text-subtle transition-colors duration-300 group-hover:text-primary-ink">{String(i + 1).padStart(2, '0')}</span>
                 <h3 className="mt-2 text-[17px] font-semibold">{s.title}</h3>
                 <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">{s.text}</p>
-              </li>
+              </Reveal>
             ))}
           </ol>
         </Section>
@@ -172,7 +173,7 @@ export default function LandingPage() {
         {/* Students & sponsors */}
         <section className="px-5 pb-20 sm:px-8 lg:pb-28">
           <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-2">
-            <div id="students" className="scroll-mt-20 rounded-2xl border border-border bg-surface p-8 sm:p-10">
+            <Reveal id="students" className="scroll-mt-20 rounded-2xl border border-border bg-surface p-6 transition-[border-color,box-shadow] duration-300 hover:border-border-strong hover:shadow-pop min-[400px]:p-8 sm:p-10">
               <p className="text-sm font-medium text-primary-ink">For students</p>
               <h3 className="mt-2 font-display text-[28px] font-medium leading-tight">Ask for help, with dignity</h3>
               <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
@@ -190,9 +191,9 @@ export default function LandingPage() {
               <Link to="/register?role=STUDENT" className={cn(buttonVariants(), 'mt-8')}>
                 Start an application
               </Link>
-            </div>
+            </Reveal>
 
-            <div id="sponsors" className="scroll-mt-20 rounded-2xl border border-border bg-surface p-8 sm:p-10">
+            <Reveal id="sponsors" delay={90} className="scroll-mt-20 rounded-2xl border border-border bg-surface p-6 transition-[border-color,box-shadow] duration-300 hover:border-border-strong hover:shadow-pop min-[400px]:p-8 sm:p-10">
               <p className="text-sm font-medium text-primary-ink">For sponsors</p>
               <h3 className="mt-2 font-display text-[28px] font-medium leading-tight">Give with confidence</h3>
               <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
@@ -214,12 +215,12 @@ export default function LandingPage() {
               <Link to="/register?role=SPONSOR" className={cn(buttonVariants({ variant: 'secondary' }), 'mt-8')}>
                 Become a sponsor
               </Link>
-            </div>
+            </Reveal>
           </div>
           <p className="mx-auto mt-8 max-w-6xl text-[15px] text-muted-foreground">
             Want to help verify applications?{' '}
-            <Link to="/register?role=VOLUNTEER" className="inline-flex items-center gap-1 font-medium text-primary-ink hover:underline">
-              Volunteer with EduBridge <ArrowRight className="size-4" />
+            <Link to="/register?role=VOLUNTEER" className="group inline-flex items-center gap-1 font-medium text-primary-ink hover:underline">
+              Volunteer with EduBridge <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-0.5" />
             </Link>
           </p>
         </section>
@@ -231,7 +232,7 @@ export default function LandingPage() {
             title="How documents are verified"
             text="Each document is checked using the most reliable method available for it."
           />
-          <div className="mt-12 overflow-hidden rounded-xl border border-border">
+          <Reveal className="mt-12 overflow-hidden rounded-xl border border-border">
             <table className="w-full text-left text-[15px]">
               <thead className="hidden bg-sunken text-sm text-muted-foreground md:table-header-group">
                 <tr>
@@ -242,7 +243,7 @@ export default function LandingPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {verification.map((v) => (
-                  <tr key={v.doc} className="block px-6 py-5 md:table-row md:p-0">
+                  <tr key={v.doc} className="block px-5 py-5 transition-colors hover:bg-sunken/60 sm:px-6 md:table-row md:p-0">
                     <td className="block font-semibold md:table-cell md:w-[22%] md:px-6 md:py-5 md:align-top">{v.doc}</td>
                     <td className="mt-1 block leading-relaxed text-muted-foreground md:table-cell md:px-6 md:py-5 md:align-top">{v.how}</td>
                     <td className="mt-2 block text-sm text-muted-foreground md:table-cell md:w-[26%] md:px-6 md:py-5 md:align-top md:text-[15px]">
@@ -252,7 +253,7 @@ export default function LandingPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </Reveal>
           <p className="mt-6 max-w-3xl text-[15px] leading-relaxed text-muted-foreground">
             If an official service is temporarily unavailable, the document waits for a person to review it. A document is never
             rejected automatically because a website was down.
@@ -263,16 +264,16 @@ export default function LandingPage() {
         <Section>
           <Heading eyebrow="Our principles" title="Trust is built in, not added on" />
           <div className="mt-12 grid gap-x-12 gap-y-10 md:grid-cols-2">
-            {principles.map((p) => (
-              <div key={p.title} className="flex gap-4">
-                <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-primary-soft text-primary-ink">
+            {principles.map((p, i) => (
+              <Reveal key={p.title} delay={(i % 2) * 90} className="group flex gap-4">
+                <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-primary-soft text-primary-ink transition-transform duration-300 group-hover:-translate-y-0.5">
                   <p.icon className="size-5" />
                 </span>
                 <div>
                   <h3 className="text-[17px] font-semibold">{p.title}</h3>
                   <p className="mt-1.5 text-[15px] leading-relaxed text-muted-foreground">{p.text}</p>
                 </div>
-              </div>
+              </Reveal>
             ))}
           </div>
         </Section>
@@ -281,31 +282,31 @@ export default function LandingPage() {
         <Section id="faq" className="pt-0 lg:pt-0">
           <div className="grid gap-10 lg:grid-cols-[1fr_1.6fr] lg:gap-16">
             <Heading eyebrow="Questions" title="Frequently asked questions" />
-            <div className="divide-y divide-border border-y border-border">
+            <Reveal className="divide-y divide-border border-y border-border">
               {faqs.map((f) => (
                 <details key={f.q} className="group py-1">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-4 text-[16px] font-medium">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-4 text-[16px] font-medium transition-colors hover:text-primary-ink">
                     {f.q}
                     <span className="relative size-4 shrink-0 text-muted-foreground" aria-hidden>
                       <span className="absolute left-0 top-1/2 h-px w-4 bg-current" />
-                      <span className="absolute left-1/2 top-0 h-4 w-px bg-current transition-transform group-open:scale-y-0" />
+                      <span className="absolute left-1/2 top-0 h-4 w-px bg-current transition-transform duration-300 group-open:rotate-90 group-open:scale-y-0" />
                     </span>
                   </summary>
-                  <p className="pb-5 pr-10 text-[15px] leading-relaxed text-muted-foreground">{f.a}</p>
+                  <p className="pb-5 pr-4 text-[15px] leading-relaxed text-muted-foreground sm:pr-10">{f.a}</p>
                 </details>
               ))}
-            </div>
+            </Reveal>
           </div>
         </Section>
 
         {/* Closing */}
         <section className="px-5 pb-20 sm:px-8 lg:pb-28">
-          <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-8 rounded-2xl bg-[#2f5d50] px-8 py-12 text-[#f7f6f2] sm:px-12 lg:flex-row lg:items-center">
+          <Reveal className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-8 rounded-2xl bg-[#2f5d50] px-6 py-10 text-[#f7f6f2] min-[400px]:px-8 sm:px-12 sm:py-12 lg:flex-row lg:items-center">
             <div>
               <h2 className="font-display text-[32px] font-medium leading-tight">Ready to begin?</h2>
               <p className="mt-2 text-[17px] text-[#f7f6f2]/75">It takes a couple of minutes to create an account.</p>
             </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
               <Link to="/register?role=STUDENT" className={cn(buttonVariants({ size: 'lg' }), 'bg-[#f7f6f2] text-[#234a3f] hover:bg-white')}>
                 Apply for support
               </Link>
@@ -316,7 +317,7 @@ export default function LandingPage() {
                 Become a sponsor
               </Link>
             </div>
-          </div>
+          </Reveal>
         </section>
       </main>
 

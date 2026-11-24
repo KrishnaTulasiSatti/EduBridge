@@ -17,19 +17,19 @@ export function PageHeader({
     <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
         {meta && <div className="mb-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">{meta}</div>}
-        <h1 className="font-display text-[30px] font-medium leading-tight">{title}</h1>
+        <h1 className="font-display text-[26px] font-medium leading-tight text-balance sm:text-[30px]">{title}</h1>
         {description && <p className="mt-1.5 max-w-2xl text-[15px] text-muted-foreground">{description}</p>}
       </div>
-      {actions && <div className="flex shrink-0 gap-2">{actions}</div>}
+      {actions && <div className="flex flex-wrap gap-2 sm:shrink-0">{actions}</div>}
     </div>
   );
 }
 
 export function Stat({ label, value, hint, className }: { label: string; value: ReactNode; hint?: ReactNode; className?: string }) {
   return (
-    <div className={cn('rounded-xl border border-border bg-surface px-5 py-4 shadow-card', className)}>
+    <div className={cn('rounded-xl border border-border bg-surface px-5 py-4 shadow-card transition-[border-color,box-shadow] duration-200 hover:border-border-strong', className)}>
       <p className="text-[13px] text-muted-foreground">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight">{value}</p>
+      <div className="mt-1 text-2xl font-semibold tabular-nums tracking-tight">{value}</div>
       {hint && <p className="mt-0.5 text-[13px] text-subtle">{hint}</p>}
     </div>
   );
@@ -49,7 +49,7 @@ export function EmptyState({
   className?: string;
 }) {
   return (
-    <div className={cn('flex flex-col items-center px-6 py-12 text-center', className)}>
+    <div className={cn('flex flex-col items-center px-6 py-12 text-center animate-fade-up', className)}>
       <span className="grid size-11 place-items-center rounded-full bg-sunken text-subtle ring-1 ring-border">
         <Icon className="size-5" />
       </span>
@@ -61,7 +61,27 @@ export function EmptyState({
 }
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn('animate-pulse rounded-md bg-sunken', className)} />;
+  return <div className={cn('skeleton rounded-md', className)} aria-hidden />;
+}
+
+/** Placeholder table rows while a list loads for the first time. */
+export function SkeletonRows({ cols, rows = 5 }: { cols: number; rows?: number }) {
+  // Varied widths so the placeholder looks like real text, not a grid of identical bars.
+  const widths = ['w-3/4', 'w-1/2', 'w-2/3', 'w-2/5', 'w-1/3', 'w-3/5'];
+  return (
+    <>
+      {Array.from({ length: rows }, (_, r) => (
+        <tr key={r} className="border-b border-border last:border-0" aria-hidden>
+          {Array.from({ length: cols }, (_, c) => (
+            <td key={c} className="px-5 py-4">
+              <div className={cn('skeleton h-3.5 rounded', widths[(r + c * 2) % widths.length])} />
+              {c === 0 && <div className="skeleton mt-2 h-3 w-1/3 rounded" />}
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
+  );
 }
 
 /** Label / value pairs used for read-only summaries. */

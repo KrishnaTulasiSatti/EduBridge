@@ -41,7 +41,7 @@ export function MeterRow({ label, value, max, valueText, tip }: { label: ReactNo
         <span className="tabular-nums text-foreground">{valueText}</span>
       </div>
       <div className="mt-1.5 h-2 w-full rounded-full bg-chart-track">
-        <div className="h-2 rounded-r-[4px] bg-chart" style={{ width: `${share * 100}%`, borderTopLeftRadius: 2, borderBottomLeftRadius: 2 }} />
+        <div className="h-2 rounded-r-[4px] bg-chart animate-bar" style={{ width: `${share * 100}%`, borderTopLeftRadius: 2, borderBottomLeftRadius: 2 }} />
       </div>
     </Tip>
   );
@@ -64,7 +64,7 @@ export function ConfusionMatrix({ labels, matrix }: { labels: NeedLevel[]; matri
   const max = Math.max(1, ...matrix.flat());
   const short: Record<NeedLevel, string> = { HIGH: 'High', MEDIUM: 'Medium', LOW: 'Low' };
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto scrollbar-soft">
       <table className="text-sm" aria-label="Confusion matrix">
         <thead>
           <tr>

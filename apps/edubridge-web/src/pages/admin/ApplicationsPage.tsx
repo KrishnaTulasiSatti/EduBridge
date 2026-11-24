@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { APPLICATION_STATUS_LABELS, APPLICATION_STATUSES, EDUCATION_LEVEL_LABELS } from '@edubridge/shared';
 import { ApplicationStatusBadge } from '@/components/application/status';
-import { EmptyState, PageHeader } from '@/components/dashboard/widgets';
+import { EmptyState, PageHeader, SkeletonRows } from '@/components/dashboard/widgets';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -66,7 +66,7 @@ export default function ApplicationsPage() {
           </div>
         )}
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto scrollbar-soft">
           <table className="w-full min-w-[760px] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-[13px] text-muted-foreground">
@@ -79,8 +79,9 @@ export default function ApplicationsPage() {
               </tr>
             </thead>
             <tbody className={cn('transition-opacity', loading && 'opacity-60')}>
+              {!data && !error && <SkeletonRows cols={6} />}
               {data?.items.map((a) => (
-                <tr key={a.id} className="border-b border-border last:border-0 hover:bg-sunken/50">
+                <tr key={a.id} className="border-b border-border last:border-0 transition-colors duration-150 hover:bg-sunken/50">
                   <td className="px-5 py-3.5">
                     <Link to={['SUBMITTED', 'UNDER_VERIFICATION', 'VOLUNTEER_REVIEWED'].includes(a.status) ? `/dashboard/verify/${a.id}` : `/dashboard/review/${a.id}`} className="font-medium hover:text-primary-ink hover:underline">
                       {a.studentName}

@@ -1,5 +1,6 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import type { ApiError, VaultAuthResponse as AuthResponse } from '@eduvault/shared';
+import { beginActivity } from './activity';
 
 const baseURL = `${import.meta.env.VITE_API_URL ?? ''}/api`;
 
@@ -11,8 +12,17 @@ export const setAccessToken = (t: string | null) => {
   accessToken = t;
 };
 
+// Every request shows the loading bar at the top of the window until it finishes.
+type Tracked = InternalAxiosRequestConfig & { _endActivity?: () => void };
+const endActivity = (config: unknown) => {
+  const c = config as Tracked | undefined;
+  c?._endActivity?.();
+  if (c) c._endActivity = undefined;
+};
+
 api.interceptors.request.use((config) => {
   if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`;
+  (config as Tracked)._endActivity = beginActivity();
   return config;
 });
 
@@ -37,8 +47,12 @@ export function refreshSession() {
 }
 
 api.interceptors.response.use(
-  (r) => r,
+  (r) => {
+    endActivity(r.config);
+    return r;
+  },
   async (error: AxiosError<ApiError>) => {
+    endActivity(error.config);
     const original = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
     const isAuthCall = original?.url?.startsWith('/auth/');
     if (error.response?.status === 401 && original && !original._retry && !isAuthCall) {

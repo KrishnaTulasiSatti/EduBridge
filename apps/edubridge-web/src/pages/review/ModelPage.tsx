@@ -24,7 +24,7 @@ function Comparison({ report }: { report: ModelReportDTO }) {
   return (
     <Card>
       <CardHeader title="Model comparison" description="Stratified 5-fold cross-validation. The model with the best macro F1 is used." />
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto scrollbar-soft">
         <table className="w-full min-w-[560px] text-sm">
           <thead>
             <tr className="border-b border-border text-left text-[13px] text-muted-foreground">
@@ -116,7 +116,7 @@ function Fairness({ report }: { report: ModelReportDTO }) {
   return (
     <Card>
       <CardHeader title="Fairness check" description={`Results by ${report.fairness.attribute}, from cross-validation.`} />
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto scrollbar-soft">
         <table className="w-full min-w-[620px] text-sm">
           <thead>
             <tr className="border-b border-border text-left text-[13px] text-muted-foreground">

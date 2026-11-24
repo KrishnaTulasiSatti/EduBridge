@@ -155,7 +155,7 @@ export default function StudentsPage() {
         ) : data.items.length === 0 ? (
           <EmptyState icon={Users} title={query ? 'No matching students' : 'No students enrolled yet'} text={query ? 'Try a different search.' : 'Enrol a student to issue their marksheets.'} />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto scrollbar-soft">
             <table className="w-full min-w-[640px] text-sm">
               <thead className="border-b border-border text-left text-[13px] text-muted-foreground">
                 <tr>

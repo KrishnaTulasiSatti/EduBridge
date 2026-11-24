@@ -104,7 +104,7 @@ export default function StudentHome() {
               </span>
             </div>
             <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-sunken ring-1 ring-border">
-              <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${(count / SECTIONS.length) * 100}%` }} />
+              <div className="h-full rounded-full bg-primary transition-[width] duration-500 animate-bar" style={{ width: `${(count / SECTIONS.length) * 100}%` }} />
             </div>
             <ul className="mt-6 grid gap-x-8 gap-y-3 sm:grid-cols-2">
               {SECTIONS.map((s) => (

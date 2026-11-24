@@ -3,6 +3,7 @@ import { BrowserRouter, Link, Route, Routes } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { FullPageLoader, GuestRoute, ProtectedRoute } from '@/components/layout/ProtectedRoute';
+import { ActivityBar } from '@/components/ui/loaders';
 import { buttonVariants } from '@/components/ui/button';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
@@ -69,6 +70,7 @@ export default function App() {
     <ThemeProvider>
       <AuthProvider>
         <BrowserRouter>
+          <ActivityBar />
           <Suspense fallback={<FullPageLoader />}>
             <Routes>
               <Route path="/" element={<LandingPage />} />

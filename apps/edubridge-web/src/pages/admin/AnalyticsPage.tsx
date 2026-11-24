@@ -242,7 +242,7 @@ function TrendCard({ data }: { data: AnalyticsDTO }) {
     <Card>
       <CardHeader title="Last 12 months" description={`${t.title}: ${format(total)} in total.`} />
       <CardBody>
-        <div className="mb-5 flex gap-1 overflow-x-auto scrollbar-thin" role="tablist" aria-label="Measure">
+        <div className="mb-5 flex gap-1 overflow-x-auto scrollbar-soft" role="tablist" aria-label="Measure">
           {TRENDS.map((x) => (
             <button
               key={x.key}
@@ -277,7 +277,7 @@ function VolunteerCard({ data }: { data: AnalyticsDTO }) {
       {rows.length === 0 ? (
         <EmptyState icon={Users} title="No active volunteers" text="Approved volunteers appear here." className="py-8" />
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto scrollbar-soft">
           <table className="w-full min-w-[620px] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-[13px] text-muted-foreground">

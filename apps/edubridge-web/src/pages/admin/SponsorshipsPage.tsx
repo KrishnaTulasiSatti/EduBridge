@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import type { SponsorshipDTO, SponsorshipStatus } from '@edubridge/shared';
-import { EmptyState, PageHeader, Stat } from '@/components/dashboard/widgets';
+import { EmptyState, PageHeader, Skeleton, Stat } from '@/components/dashboard/widgets';
 import { SponsorshipStatusBadge, sponsorshipStatusLine } from '@/components/sponsorship/parts';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -129,6 +129,17 @@ export default function SponsorshipsPage() {
         )}
 
         <ul className={cn('divide-y divide-border transition-opacity', loading && 'opacity-60')}>
+          {!data &&
+            !error &&
+            [0, 1, 2, 3].map((i) => (
+              <li key={i} className="flex items-center gap-4 px-5 py-4" aria-hidden>
+                <div className="min-w-0 flex-1">
+                  <Skeleton className="h-4 w-1/2" />
+                  <Skeleton className="mt-2 h-3 w-1/3" />
+                </div>
+                <Skeleton className="h-8 w-24 rounded-lg" />
+              </li>
+            ))}
           {data?.items.map((s) => (
             <li key={s.id} className="px-5 py-4">
               <div className="flex flex-col gap-3 md:flex-row md:items-center">

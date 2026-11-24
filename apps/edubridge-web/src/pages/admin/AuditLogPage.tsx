@@ -105,7 +105,7 @@ export default function AuditLogPage() {
 
       <Card className="overflow-hidden">
         <div className="space-y-3 border-b border-border p-4">
-          <div className="flex gap-1 overflow-x-auto scrollbar-thin" role="tablist" aria-label="Category">
+          <div className="flex gap-1 overflow-x-auto scrollbar-soft" role="tablist" aria-label="Category">
             {[undefined, ...AUDIT_CATEGORIES].map((c) => (
               <button
                 key={c ?? 'ALL'}
@@ -187,7 +187,7 @@ export default function AuditLogPage() {
           </div>
         )}
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto scrollbar-soft">
           <table className="w-full min-w-[820px] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-[13px] text-muted-foreground">
@@ -304,9 +304,9 @@ function EntrySheet({ id, onClose, onOpen }: { id: string; onClose: () => void; 
   const e = data?.entry;
   return (
     <div className="fixed inset-0 z-40 flex justify-end" role="dialog" aria-modal="true" aria-label="Audit entry">
-      <button type="button" className="absolute inset-0 cursor-default bg-black/20" aria-label="Close" onClick={onClose} />
-      <aside className="relative flex h-full w-full max-w-lg flex-col border-l border-border bg-surface shadow-pop">
-        <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
+      <button type="button" className="absolute inset-0 cursor-default bg-black/20 animate-fade" aria-label="Close" onClick={onClose} />
+      <aside className="relative flex h-full w-full max-w-lg flex-col border-l border-border bg-surface shadow-pop animate-slide-in-right">
+        <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4 sm:px-6">
           <div className="min-w-0">
             <p className="text-[13px] text-muted-foreground">{e ? AUDIT_CATEGORY_LABELS[AUDIT_ACTION_INFO[e.action]?.category ?? 'PLATFORM'] : 'Audit entry'}</p>
             <h2 className="font-display text-xl font-medium">{e ? auditTitle(e.action) : ' '}</h2>
@@ -315,7 +315,7 @@ function EntrySheet({ id, onClose, onOpen }: { id: string; onClose: () => void; 
             <X />
           </Button>
         </div>
-        <div className="flex-1 overflow-y-auto px-6 py-5">
+        <div className="flex-1 overflow-y-auto px-5 py-5 scrollbar-soft sm:px-6">
           {error && <Alert tone="danger">{error}</Alert>}
           {!e && !error && <Skeleton className="h-60" />}
           {e && (

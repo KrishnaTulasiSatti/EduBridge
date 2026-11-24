@@ -2,7 +2,7 @@ import { ChevronLeft, ChevronRight, Gavel, Search } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { DECISION_LABELS, NEED_LEVEL_LABELS, RECOMMENDATION_LABELS, type NeedLevel, type Recommendation } from '@edubridge/shared';
-import { EmptyState, PageHeader } from '@/components/dashboard/widgets';
+import { EmptyState, PageHeader, SkeletonRows } from '@/components/dashboard/widgets';
 import { Alert } from '@/components/ui/alert';
 import { Badge, type BadgeTone } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -77,7 +77,7 @@ export default function ReviewQueuePage() {
           </div>
         )}
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto scrollbar-soft">
           <table className="w-full min-w-[900px] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-[13px] text-muted-foreground">
@@ -92,8 +92,9 @@ export default function ReviewQueuePage() {
               </tr>
             </thead>
             <tbody className={cn('transition-opacity', loading && 'opacity-60')}>
+              {!data && !error && <SkeletonRows cols={tab === 'decided' ? 8 : 7} />}
               {data?.items.map((a) => (
-                <tr key={a.id} className="border-b border-border last:border-0 hover:bg-sunken/50">
+                <tr key={a.id} className="border-b border-border last:border-0 transition-colors duration-150 hover:bg-sunken/50">
                   <td className="px-5 py-3.5">
                     <p className="font-medium">{a.studentName}</p>
                     <p className="max-w-[220px] truncate text-[13px] text-subtle">

@@ -4,7 +4,7 @@ import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
 
 export const buttonVariants = cva(
-  'inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-colors duration-150 disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0',
+  'inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-[color,background-color,border-color,box-shadow,transform,filter] duration-150 ease-out active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0',
   {
     variants: {
       variant: {
@@ -13,7 +13,7 @@ export const buttonVariants = cva(
         ghost: 'text-muted-foreground hover:bg-sunken hover:text-foreground',
         soft: 'bg-primary-soft text-primary-ink hover:brightness-[0.97]',
         danger: 'border border-border-strong bg-surface text-danger hover:bg-danger-soft',
-        link: 'h-auto px-0 text-primary-ink underline-offset-4 hover:underline',
+        link: 'h-auto px-0 text-primary-ink underline-offset-4 hover:underline active:scale-100',
       },
       size: {
         sm: 'h-8 px-3 text-[13px]',
@@ -39,7 +39,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       disabled={disabled || loading}
       {...props}
     >
-      {loading && <Loader2 className="animate-spin" />}
+      {loading && <Loader2 className="animate-spin" aria-hidden />}
       {children}
     </button>
   ),

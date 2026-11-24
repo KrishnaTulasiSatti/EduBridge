@@ -30,15 +30,19 @@ export function Navbar() {
   return (
     <header
       className={cn(
-        'sticky top-0 z-40 border-b bg-background/95 backdrop-blur-sm transition-colors',
-        scrolled || open ? 'border-border' : 'border-transparent',
+        'sticky top-0 z-40 border-b bg-background/95 backdrop-blur-sm transition-[border-color,box-shadow] duration-300',
+        scrolled || open ? 'border-border shadow-[0_1px_8px_-4px_rgb(29_33_31/0.12)]' : 'border-transparent',
       )}
     >
       <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 sm:px-8">
         <Logo />
         <div className="hidden items-center gap-7 lg:flex">
           {links.map((l) => (
-            <a key={l.href} href={l.href} className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+            <a
+              key={l.href}
+              href={l.href}
+              className="relative text-sm text-muted-foreground transition-colors after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:origin-left after:scale-x-0 after:bg-current after:transition-transform after:duration-300 hover:text-foreground hover:after:scale-x-100"
+            >
               {l.label}
             </a>
           ))}
@@ -66,36 +70,45 @@ export function Navbar() {
             aria-label={open ? 'Close menu' : 'Open menu'}
             aria-expanded={open}
           >
-            {open ? <X className="size-5" /> : <Menu className="size-5" />}
+            <span key={String(open)} className="grid place-items-center animate-spin-in">
+              {open ? <X className="size-5" /> : <Menu className="size-5" />}
+            </span>
           </button>
         </div>
       </nav>
 
-      {open && (
-        <div className="border-t border-border px-5 pb-5 pt-2 lg:hidden">
-          {links.map((l) => (
-            <a key={l.href} href={l.href} onClick={() => setOpen(false)} className="block py-2.5 text-[15px] text-muted-foreground hover:text-foreground">
-              {l.label}
-            </a>
-          ))}
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            {user ? (
-              <Link to="/dashboard" className={cn(buttonVariants(), 'col-span-2')}>
-                Open dashboard
-              </Link>
-            ) : (
-              <>
-                <Link to="/login" className={buttonVariants({ variant: 'secondary' })}>
-                  Sign in
+      <div
+        className={cn(
+          'grid transition-[grid-template-rows,opacity,visibility] duration-300 ease-out lg:hidden',
+          open ? 'visible grid-rows-[1fr] opacity-100' : 'invisible grid-rows-[0fr] opacity-0',
+        )}
+      >
+        <div className="overflow-hidden">
+          <div className="border-t border-border px-5 pb-5 pt-2">
+            {links.map((l) => (
+              <a key={l.href} href={l.href} onClick={() => setOpen(false)} className="block py-2.5 text-[15px] text-muted-foreground hover:text-foreground">
+                {l.label}
+              </a>
+            ))}
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {user ? (
+                <Link to="/dashboard" className={cn(buttonVariants(), 'col-span-2')}>
+                  Open dashboard
                 </Link>
-                <Link to="/register" className={buttonVariants()}>
-                  Create account
-                </Link>
-              </>
-            )}
+              ) : (
+                <>
+                  <Link to="/login" className={buttonVariants({ variant: 'secondary' })}>
+                    Sign in
+                  </Link>
+                  <Link to="/register" className={buttonVariants()}>
+                    Create account
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
         </div>
-      )}
+      </div>
     </header>
   );
 }

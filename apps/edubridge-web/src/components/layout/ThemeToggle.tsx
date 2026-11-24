@@ -11,11 +11,13 @@ export function ThemeToggle({ className }: { className?: string }) {
       title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
       aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
       className={cn(
-        'grid size-9 cursor-pointer place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-sunken hover:text-foreground',
+        'grid size-9 cursor-pointer place-items-center rounded-lg text-muted-foreground transition-[color,background-color,transform] hover:bg-sunken hover:text-foreground active:scale-95',
         className,
       )}
     >
-      {theme === 'dark' ? <Moon className="size-[18px]" /> : <Sun className="size-[18px]" />}
+      <span key={theme} className="grid place-items-center animate-spin-in">
+        {theme === 'dark' ? <Moon className="size-[18px]" /> : <Sun className="size-[18px]" />}
+      </span>
     </button>
   );
 }

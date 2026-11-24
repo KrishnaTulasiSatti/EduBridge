@@ -2,7 +2,7 @@ import { ChevronLeft, ChevronRight, Search, Users } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { ROLE_LABELS, ROLES, type AccountStatus, type PublicUser, type Role } from '@edubridge/shared';
-import { EmptyState, PageHeader } from '@/components/dashboard/widgets';
+import { EmptyState, PageHeader, SkeletonRows } from '@/components/dashboard/widgets';
 import { Alert } from '@/components/ui/alert';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge, Dot } from '@/components/ui/badge';
@@ -53,7 +53,7 @@ export default function UsersPage() {
       <PageHeader title="Users" description="Approve volunteers and manage access to EduBridge." />
       <Card className="overflow-hidden">
         <div className="flex flex-col gap-3 border-b border-border p-4 lg:flex-row lg:items-center">
-          <div className="flex gap-1 overflow-x-auto scrollbar-thin" role="tablist">
+          <div className="flex gap-1 overflow-x-auto scrollbar-soft" role="tablist">
             {[undefined, ...ROLES].map((r) => (
               <button
                 key={r ?? 'ALL'}
@@ -94,7 +94,7 @@ export default function UsersPage() {
           </div>
         )}
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto scrollbar-soft">
           <table className="w-full min-w-[720px] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-[13px] text-muted-foreground">
@@ -106,8 +106,9 @@ export default function UsersPage() {
               </tr>
             </thead>
             <tbody className={cn('transition-opacity', loading && 'opacity-60')}>
+              {!data && !error && <SkeletonRows cols={5} />}
               {data?.items.map((u) => (
-                <tr key={u.id} className="border-b border-border last:border-0 hover:bg-sunken/50">
+                <tr key={u.id} className="border-b border-border last:border-0 transition-colors duration-150 hover:bg-sunken/50">
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
                       <Avatar name={u.fullName} className="size-8 text-xs" />

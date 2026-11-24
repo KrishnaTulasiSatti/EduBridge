@@ -60,7 +60,7 @@ export function FundingBar({ approved, promised, className, compact }: { approve
         role="img"
         aria-label={`${formatINR(promised)} promised of ${formatINR(approved)}`}
       >
-        <div className="h-full bg-[var(--chart)]" style={{ width: `${pct}%` }} />
+        <div className="h-full bg-[var(--chart)] animate-bar" style={{ width: `${pct}%` }} />
       </div>
       {!compact && (
         <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1.5 text-[13px] text-muted-foreground">
@@ -90,7 +90,7 @@ export function MatchBreakdown({ match }: { match: MatchResult }) {
             </span>
           </div>
           <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[var(--chart-track)]">
-            <div className="h-full rounded-full bg-[var(--chart)]" style={{ width: `${f.value * 100}%` }} />
+            <div className="h-full rounded-full bg-[var(--chart)] animate-bar" style={{ width: `${f.value * 100}%` }} />
           </div>
           <p className="mt-1 text-[13px] text-muted-foreground">{f.detail}</p>
         </li>

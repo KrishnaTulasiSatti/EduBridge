@@ -2,8 +2,10 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { IdleSignOut } from '@/components/layout/IdleSignOut';
 import { NAVIGATION } from '@/components/layout/navigation';
 import { FullPageLoader, GuestRoute, ProtectedRoute } from '@/components/layout/ProtectedRoute';
+import { ActivityBar } from '@/components/ui/loaders';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import LandingPage from '@/pages/LandingPage';
@@ -77,6 +79,8 @@ export default function App() {
     <ThemeProvider>
       <AuthProvider>
         <BrowserRouter>
+          <ActivityBar />
+          <IdleSignOut />
           <Suspense fallback={<FullPageLoader />}>
             <Routes>
               <Route path="/" element={<LandingPage />} />

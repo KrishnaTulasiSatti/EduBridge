@@ -28,7 +28,7 @@ export function AuthLayout({ children, aside, wide }: { children: ReactNode; asi
           <ThemeToggle />
         </div>
         <div className="flex flex-1 items-start justify-center px-5 pb-16 pt-6 sm:items-center sm:px-8 sm:pt-0">
-          <div className={wide ? 'w-full max-w-[520px] animate-fade-in' : 'w-full max-w-[400px] animate-fade-in'}>
+          <div className={wide ? 'w-full max-w-[520px] animate-fade-up' : 'w-full max-w-[400px] animate-fade-up'}>
             {children}
             <SimulationNotice className="mt-10 lg:hidden" />
           </div>

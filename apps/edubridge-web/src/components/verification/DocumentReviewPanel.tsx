@@ -36,7 +36,7 @@ import { verificationApi } from '@/lib/verification';
 export function ChecksTable({ checks }: { checks: VerificationCheck[] }) {
   if (!checks.length) return null;
   return (
-    <div className="overflow-x-auto rounded-lg border border-border">
+    <div className="overflow-x-auto scrollbar-soft rounded-lg border border-border">
       <table className="w-full min-w-[460px] text-sm">
         <thead>
           <tr className="border-b border-border bg-sunken/60 text-left text-[13px] text-muted-foreground">

@@ -17,7 +17,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   }, [theme]);
 
-  const toggle = useCallback(() => setTheme((t) => (t === 'dark' ? 'light' : 'dark')), []);
+  const toggle = useCallback(() => {
+    // Fade colours for a moment so switching theme doesn't flash.
+    const root = document.documentElement;
+    root.classList.add('theme-transition');
+    window.setTimeout(() => root.classList.remove('theme-transition'), 350);
+    setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
+  }, []);
   return <ThemeContext.Provider value={{ theme, toggle }}>{children}</ThemeContext.Provider>;
 }
 
