@@ -31,7 +31,7 @@ const steps = [
   { title: 'Volunteer review', text: 'A trained volunteer compares the documents with the application and notes anything that does not match.' },
   { title: 'Need assessment', text: 'A transparent scoring model estimates financial need and shows the factors behind the estimate.' },
   { title: 'Administrator decision', text: 'An administrator looks at everything together and decides on eligibility, recording the reason.' },
-  { title: 'Sponsorship', text: 'Approved students are shown to sponsors whose preferences match. Every contribution is recorded.' },
+  { title: 'Sponsorship', text: 'Approved students are shown to sponsors whose preferences match. A sponsor connects with a student and they arrange the support together.' },
 ];
 
 const verification = [
@@ -61,7 +61,7 @@ const principles = [
   {
     icon: Lock,
     title: 'Private by default',
-    text: 'Sponsors see an anonymised profile. Names, contact details and documents are never shown to them.',
+    text: 'Sponsors see an anonymised profile. Only a sponsor who connects with a student sees their name and contact details, and only if the student agreed. Documents are never shown.',
   },
   {
     icon: FileCheck2,
@@ -90,15 +90,15 @@ const faqs = [
   },
   {
     q: 'What can sponsors see about me?',
-    a: 'Sponsors see your course, year, state, the kind of support you need and how much of it is still unfunded. They do not see your name, contact details or documents.',
+    a: 'Sponsors see your course, year, state, the kind of support you need and how much of it is still unfunded. They do not see your name or contact details unless they connect with you, and you choose whether to allow that. They never see your documents.',
   },
   {
     q: 'How is financial need assessed?',
     a: 'Factors such as income per family member, the number of earning members, education costs and existing scholarships are combined into a score. The score is a recommendation; an administrator makes the decision.',
   },
   {
-    q: 'As a sponsor, how do I know where my money goes?',
-    a: 'Each sponsorship is recorded against a specific student and amount. A student can never receive more than their approved requirement, and your dashboard shows every allocation.',
+    q: 'As a sponsor, how do I support a student?',
+    a: 'Choose an approved student and connect with them, saying how much you intend to give. You then see their name, email and phone number and arrange the support directly. EduBridge does not handle money.',
   },
 ];
 
@@ -141,7 +141,7 @@ export default function LandingPage() {
             {[
               ['Checked at the source', 'Documents are verified with issuing institutions and official portals, not taken at face value.'],
               ['Decided by people', 'Volunteers review every application and an administrator makes each final decision.'],
-              ['Accounted for', 'Funding never exceeds a student’s approved need, and every allocation is traceable.'],
+              ['Accounted for', 'Promised support never exceeds a student’s approved need, and every connection is recorded.'],
             ].map(([t, d]) => (
               <div key={t} className="py-8 md:px-8 md:first:pl-0 md:last:pr-0">
                 <p className="font-display text-xl font-medium">{t}</p>
@@ -196,15 +196,15 @@ export default function LandingPage() {
               <p className="text-sm font-medium text-primary-ink">For sponsors</p>
               <h3 className="mt-2 font-display text-[28px] font-medium leading-tight">Give with confidence</h3>
               <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
-                Support students whose documents have been verified and whose need has been reviewed, and see exactly where your
-                contribution goes.
+                Connect with students whose documents have been verified and whose need has been reviewed, and support them
+                directly.
               </p>
               <p className="mt-7 text-sm font-semibold">What you can do</p>
               <ul className="mt-3 space-y-2.5">
                 {[
                   'Choose by level of study and type of support',
-                  'Fund a student’s full need or part of it',
-                  'Follow every allocation from your dashboard',
+                  'Support a student’s full need or part of it',
+                  'Contact the students you connect with directly',
                 ].map((t) => (
                   <li key={t} className="flex gap-2.5 text-[15px] text-muted-foreground">
                     <Check className="mt-1 size-4 shrink-0 text-primary" /> {t}

@@ -15,31 +15,33 @@ import type { NeedLevel } from './assessment';
 
 /* ------------------------------------------------------------- Rules */
 
-/** Smallest pledge a sponsor can make. */
-export const MIN_PLEDGE = 500;
-/** A pledge reserves part of the student's requirement for this long; the sponsor must send the money within it. */
-export const PLEDGE_HOLD_DAYS = 14;
+/**
+ * EduBridge connects sponsors with approved students. No money moves through the platform:
+ * the sponsor records the amount they intend to give, and both sides then see each other's
+ * contact details and arrange the support directly.
+ */
+
+/** Smallest amount a sponsor can offer. */
+export const MIN_SUPPORT = 500;
 
 /**
- * PLEDGED   → the sponsor has committed; waiting for them to transfer the money to the student's bank account.
- * SENT      → the sponsor says the money was sent; waiting for the student to confirm it arrived.
- * CONFIRMED → the student (or an administrator) confirmed the money was received. Certificates are issued.
+ * CONNECTED → the sponsor connected with the student; both see each other's contact details.
+ * ENDED     → the connection was ended by the sponsor or an administrator.
  */
-export const SPONSORSHIP_STATUSES = ['PLEDGED', 'SENT', 'CONFIRMED', 'CANCELLED'] as const;
+export const SPONSORSHIP_STATUSES = ['CONNECTED', 'ENDED'] as const;
 export type SponsorshipStatus = (typeof SPONSORSHIP_STATUSES)[number];
 export const SPONSORSHIP_STATUS_LABELS: Record<SponsorshipStatus, string> = {
-  PLEDGED: 'Pledged',
-  SENT: 'Sent',
-  CONFIRMED: 'Received',
-  CANCELLED: 'Cancelled',
+  CONNECTED: 'Connected',
+  ENDED: 'Ended',
 };
 
-export const CANCEL_REASONS = ['BY_SPONSOR', 'BY_ADMIN', 'EXPIRED'] as const;
-export type CancelReason = (typeof CANCEL_REASONS)[number];
-export const CANCEL_REASON_LABELS: Record<CancelReason, string> = {
-  BY_SPONSOR: 'Withdrawn by the sponsor',
-  BY_ADMIN: 'Cancelled by an administrator',
-  EXPIRED: `Money not sent within ${PLEDGE_HOLD_DAYS} days`,
+/** EXPIRED only appears on records from before connections replaced payments. */
+export const END_REASONS = ['BY_SPONSOR', 'BY_ADMIN', 'EXPIRED'] as const;
+export type EndReason = (typeof END_REASONS)[number];
+export const END_REASON_LABELS: Record<EndReason, string> = {
+  BY_SPONSOR: 'Ended by the sponsor',
+  BY_ADMIN: 'Ended by an administrator',
+  EXPIRED: 'Expired',
 };
 
 /* ------------------------------------------------------- Preferences */
@@ -47,10 +49,9 @@ export const CANCEL_REASON_LABELS: Record<CancelReason, string> = {
 const money = z.number({ error: 'Enter an amount' }).int('Use whole rupees').min(0, 'Cannot be negative').max(1_00_00_000, 'This amount looks too large');
 
 export const sponsorPreferencesSchema = z.object({
-  /** Name shown to students the sponsor supports (if allowed) and printed on certificates. */
-  displayName: z.string().trim().min(1, 'Enter the name to show on certificates').max(80, 'At most 80 characters'),
-  showNameToStudents: z.boolean(),
-  budget: money.min(MIN_PLEDGE, `At least ₹${MIN_PLEDGE.toLocaleString('en-IN')}`),
+  /** Name shown to the students the sponsor connects with. */
+  displayName: z.string().trim().min(1, 'Enter the name to show to students').max(80, 'At most 80 characters'),
+  budget: money.min(MIN_SUPPORT, `At least ₹${MIN_SUPPORT.toLocaleString('en-IN')}`),
   levels: z.array(z.enum(EDUCATION_LEVELS)).max(EDUCATION_LEVELS.length),
   categories: z.array(z.enum(EXPENSE_KEYS)).max(EXPENSE_KEYS.length),
   states: z.array(z.enum(INDIAN_STATES)).max(INDIAN_STATES.length),
@@ -59,96 +60,40 @@ export const sponsorPreferencesSchema = z.object({
 export type SponsorPreferences = z.infer<typeof sponsorPreferencesSchema>;
 
 export interface SponsorProfileDTO extends SponsorPreferences {
-  /** Sum of pledged and confirmed sponsorships. */
+  /** Sum of the amounts offered in active connections. */
   committed: number;
-  confirmed: number;
   available: number;
   updatedAt: string;
 }
 
 /* ----------------------------------------------------- Student consent */
 
-export const sponsorVisibilitySchema = z.object({
-  visible: z.boolean(),
-  noteToSponsors: z.string().trim().max(600, 'At most 600 characters').optional().or(z.literal('')),
-});
+export const sponsorVisibilitySchema = z
+  .object({
+    visible: z.boolean(),
+    /** Showing the profile means a sponsor who connects sees the student's name, email and mobile number. */
+    shareContact: z.boolean().optional(),
+    noteToSponsors: z.string().trim().max(600, 'At most 600 characters').optional().or(z.literal('')),
+  })
+  .refine((v) => !v.visible || v.shareContact === true, {
+    message: 'Agree to share your contact details with sponsors who connect with you',
+    path: ['shareContact'],
+  });
 export type SponsorVisibilityInput = z.infer<typeof sponsorVisibilitySchema>;
 
-/* ------------------------------------------------------------ Pledge */
+/* ----------------------------------------------------------- Connect */
 
-export const pledgeSchema = z.object({
+export const connectSchema = z.object({
   amount: z
     .number({ error: 'Enter an amount' })
     .int('Use whole rupees')
-    .min(MIN_PLEDGE, `The smallest pledge is ₹${MIN_PLEDGE.toLocaleString('en-IN')}`)
+    .min(MIN_SUPPORT, `The smallest amount is ₹${MIN_SUPPORT.toLocaleString('en-IN')}`)
     .max(1_00_00_000, 'This amount looks too large'),
   messageToStudent: z.string().trim().max(500, 'At most 500 characters').optional().or(z.literal('')),
 });
-export type PledgeInput = z.infer<typeof pledgeSchema>;
+export type ConnectInput = z.infer<typeof connectSchema>;
 
-const isoDate = (msg: string) => z.string().regex(/^\d{4}-\d{2}-\d{2}$/, msg);
-
-/** An administrator records the money as received (used when the student cannot, or to settle a report). */
-export const confirmSponsorshipSchema = z.object({
-  receivedOn: isoDate('Enter the date the funds were received'),
-  /** Bank transfer reference, receipt number or similar. */
-  reference: z.string().trim().min(1, 'Enter the payment reference').max(80, 'At most 80 characters'),
-  note: z.string().trim().max(500).optional().or(z.literal('')),
-});
-export type ConfirmSponsorshipInput = z.infer<typeof confirmSponsorshipSchema>;
-
-/* ----------------------------------------------- Direct bank transfer */
-
-/** The student's bank account. Sponsors transfer the money straight into it. */
-export const bankDetailsSchema = z.object({
-  accountHolderName: z.string().trim().min(2, 'Enter the name on the bank account').max(80, 'At most 80 characters'),
-  accountNumber: z
-    .string()
-    .trim()
-    .transform((v) => v.replace(/\s+/g, ''))
-    .pipe(z.string().regex(/^\d{9,18}$/, 'Enter a valid account number (9 to 18 digits)')),
-  ifsc: z
-    .string()
-    .trim()
-    .transform((v) => v.toUpperCase())
-    .pipe(z.string().regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, 'Enter a valid 11-character IFSC code, e.g. SBIN0001234')),
-  bankName: z.string().trim().min(2, 'Enter the bank name').max(80, 'At most 80 characters'),
-});
-export type BankDetailsInput = z.infer<typeof bankDetailsSchema>;
-
-/** Shown to the student: the account number is masked. */
-export interface BankDetailsDTO {
-  accountHolderName: string;
-  accountNumberLast4: string;
-  ifsc: string;
-  bankName: string;
-  updatedAt: string;
-}
-
-/** Shown to a sponsor only while they need to make the transfer. */
-export interface BankDetailsForSponsorDTO {
-  accountHolderName: string;
-  accountNumber: string;
-  ifsc: string;
-  bankName: string;
-}
-
-/** The sponsor records the transfer they made. */
-export const markSentSchema = z.object({
-  sentOn: isoDate('Enter the date you sent the money'),
-  /** Bank transfer UTR / transaction ID. */
-  reference: z.string().trim().min(4, 'Enter the transaction reference (UTR)').max(80, 'At most 80 characters'),
-  note: z.string().trim().max(500, 'At most 500 characters').optional().or(z.literal('')),
-});
-export type MarkSentInput = z.infer<typeof markSentSchema>;
-
-/** The student says the money has not arrived. An administrator follows up. */
-export const reportNotReceivedSchema = z.object({
-  note: z.string().trim().max(500, 'At most 500 characters').optional().or(z.literal('')),
-});
-export type ReportNotReceivedInput = z.infer<typeof reportNotReceivedSchema>;
-
-export const cancelSponsorshipSchema = z.object({
+export const endConnectionSchema = z.object({
   reason: z.string().trim().max(500, 'At most 500 characters').optional().or(z.literal('')),
 });
 
@@ -160,7 +105,7 @@ export interface MatchCandidate {
   state?: string;
   expenses?: Partial<Record<ExpenseKey, number>>;
   circumstances?: SpecialCircumstance[];
-  /** Amount still to be covered (approved minus pledged and confirmed). */
+  /** Amount still to be covered (approved minus promised). */
   remaining: number;
 }
 
@@ -270,7 +215,7 @@ export function matchScore(pref: Pick<SponsorPreferences, 'levels' | 'categories
 
 /* --------------------------------------------------------------- DTOs */
 
-/** The limited, anonymised profile a sponsor may see. No name, contact details, address, documents or income figures. */
+/** The limited, anonymised profile a sponsor sees before connecting. No name, contact details, address, documents or income figures. */
 export interface SponsorStudentCardDTO {
   id: string;
   /** Stable pseudonym, e.g. "Student 7KQ2MD". */
@@ -288,23 +233,21 @@ export interface SponsorStudentCardDTO {
   /** Annual cost breakdown (amounts only). */
   expenses: Partial<Record<ExpenseKey, number>>;
   approvedAmount: number;
-  pledged: number;
-  confirmed: number;
+  /** Amount sponsors have offered in active connections. */
+  promised: number;
   remaining: number;
   noteToSponsors?: string;
   verifiedDocuments: number;
   approvedAt: string;
   match: MatchResult;
-  /** The current sponsor's active sponsorship for this student, if any. */
+  /** The current sponsor's active connection with this student, if any. */
   mySponsorship?: { id: string; status: SponsorshipStatus; amount: number };
 }
 
-export interface CertificateRefDTO {
-  number: string;
-  /** Unguessable code printed on the certificate. Needed to open the verification page. */
-  code: string;
-  issuedAt: string;
-  revoked: boolean;
+export interface ContactDTO {
+  fullName: string;
+  email: string;
+  phone?: string;
 }
 
 export interface SponsorshipDTO {
@@ -314,66 +257,31 @@ export interface SponsorshipDTO {
   amount: number;
   academicYear: string;
   createdAt: string;
-  expiresAt?: string;
-  confirmedAt?: string;
-  cancelledAt?: string;
-  cancelReason?: CancelReason;
-  cancelNote?: string;
+  endedAt?: string;
+  endReason?: EndReason;
+  endNote?: string;
   messageToStudent?: string;
-  /** What each side sees about the other. */
-  student: { applicationId: string; alias: string; course?: string; level?: EducationLevel; name?: string; applicationNumber?: string };
-  sponsor: { name: string; anonymous: boolean; email?: string };
-  /** The sponsor's record of the transfer. */
-  payment?: {
-    sentOn: string;
-    reference: string;
-    note?: string;
-    /** Last 4 digits of the account the money was sent to. */
-    toAccountLast4?: string;
-    /** Set when the student reported that the money has not arrived. */
-    notReceived?: { at: string; note?: string };
-  };
-  /** Payment reference and note are shown to administrators and the sponsor only. */
-  confirmation?: { receivedOn: string; reference?: string; note?: string; byStudent?: boolean };
-  /** Sponsor view: whether the student has added bank details, so the money can be sent. */
-  studentBankReady?: boolean;
-  certificate?: CertificateRefDTO;
+  /** Contact details are shared while the connection is active (administrators always see them). */
+  student: { applicationId: string; alias: string; course?: string; level?: EducationLevel; applicationNumber?: string; contact?: ContactDTO };
+  sponsor: { name: string; contact?: ContactDTO };
 }
 
 export interface StudentFundingDTO {
   eligible: boolean;
   status: string;
   approvedAmount: number;
-  pledged: number;
-  confirmed: number;
+  promised: number;
   remaining: number;
   visible: boolean;
   visibleSince?: string;
+  /** The student showed their profile under the old (anonymous) terms and must agree again to share contact details. */
+  needsNewConsent?: boolean;
   noteToSponsors?: string;
   alias?: string;
-  bankDetails?: BankDetailsDTO;
   sponsorships: SponsorshipDTO[];
 }
 
 export interface SponsorshipOverviewDTO {
-  totals: { pledged: number; confirmed: number; remaining: number; eligibleStudents: number; visibleStudents: number; fullyFunded: number; sponsors: number };
+  totals: { promised: number; remaining: number; eligibleStudents: number; visibleStudents: number; fullySupported: number; sponsors: number };
   counts: Record<SponsorshipStatus, number>;
-}
-
-/** Public certificate as shown on the verification page. */
-export interface CertificateDTO {
-  number: string;
-  kind: 'SPONSOR_ACKNOWLEDGEMENT' | 'STUDENT_AWARD';
-  status: 'VALID' | 'REVOKED';
-  revokedAt?: string;
-  issuedAt: string;
-  sponsorName: string;
-  studentName?: string;
-  studentAlias: string;
-  course?: string;
-  level?: EducationLevel;
-  academicYear: string;
-  amount: number;
-  sponsorshipReference: string;
-  signature: { algorithm: 'Ed25519'; keyId: string; valid: boolean; hash: string };
 }

@@ -29,8 +29,6 @@ services:
         generateValue: true
       - key: DATA_ENCRYPTION_KEY # 64 hex characters
         sync: false
-      - key: CERTIFICATE_SIGNING_KEY # 64 hex characters
-        sync: false
       - key: EDUVAULT_API_URL # e.g. https://eduvault-api.onrender.com
         sync: false
       - key: EDUVAULT_CLIENT_ID

@@ -2,6 +2,7 @@ import { createApp } from './app';
 import { connectDB, disconnectDB } from './config/db';
 import { env } from './config/env';
 import { scheduleRetention } from './modules/retention/retention.service';
+import { migrateToConnections } from './modules/sponsorship/migrate';
 import { ADMIN_EMAIL, seedAdmin } from './scripts/seedData';
 
 async function main() {
@@ -12,6 +13,7 @@ async function main() {
     console.log(`   Administrator: ${ADMIN_EMAIL}. Everyone else registers on the website.`);
   }
 
+  await migrateToConnections();
   scheduleRetention();
 
   const server = createApp().listen(env.PORT, () => {

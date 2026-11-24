@@ -8,12 +8,12 @@ import { AuditLog } from '../src/modules/audit/audit.model';
 import { mlClient } from '../src/modules/assessment/mlClient';
 import { issuePanTokenForTests } from '../src/modules/auth/sponsorPan.service';
 import { vaultClient } from '../src/modules/eduvault/vaultClient';
-import { Certificate, Sponsorship } from '../src/modules/sponsorship/models';
+import { migrateToConnections } from '../src/modules/sponsorship/migrate';
+import { SponsorProfile, Sponsorship } from '../src/modules/sponsorship/models';
 import { DEMO_PASSWORD, seedDemoUsers } from './fixtures';
 
 const app = createApp();
 const PDF = Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF');
-const today = () => new Date().toISOString().slice(0, 10);
 
 async function login(email: string) {
   const res = await request(app).post('/api/auth/login').send({ email, password: DEMO_PASSWORD });
@@ -102,7 +102,7 @@ describe('match score', () => {
   });
 });
 
-describe('sponsorship', () => {
+describe('connecting sponsors with students', () => {
   it('requires preferences before finding students', async () => {
     const res = await request(app).get('/api/sponsor/students').set('Authorization', sponsor);
     expect(res.status).toBe(409);
@@ -113,7 +113,7 @@ describe('sponsorship', () => {
   it('saves preferences', async () => {
     for (const [token, budget] of [[sponsor, 50000], [sponsor2, 100000]] as const) {
       const res = await request(app).put('/api/sponsor/preferences').set('Authorization', token).send({
-        displayName: token === sponsor ? 'Priya Sharma' : 'Kavya Nair', showNameToStudents: token === sponsor, budget,
+        displayName: token === sponsor ? 'Priya Sharma' : 'Kavya Nair', budget,
         levels: ['UNDERGRADUATE'], categories: ['tuition'], states: [], circumstances: ['FIRST_GENERATION_LEARNER'],
       });
       expect(res.status).toBe(200);
@@ -121,211 +121,145 @@ describe('sponsorship', () => {
     }
   });
 
-  it('hides students until they agree to be shown', async () => {
-    const before = await request(app).get('/api/sponsor/students').set('Authorization', sponsor);
-    expect(before.body.total).toBe(0);
+  it('lists students only after they agree to be shown and to share contact details', async () => {
+    expect((await request(app).get('/api/sponsor/students').set('Authorization', sponsor)).body.total).toBe(0);
 
     const funding = await request(app).get('/api/funding/me').set('Authorization', student);
-    expect(funding.body).toMatchObject({ eligible: true, approvedAmount: 60000, remaining: 60000, visible: false });
+    expect(funding.body).toMatchObject({ eligible: true, approvedAmount: 60000, promised: 0, remaining: 60000, visible: false });
 
-    const res = await request(app).put('/api/funding/me/visibility').set('Authorization', student).send({ visible: true, noteToSponsors: 'Thank you for reading.' });
+    const noConsent = await request(app).put('/api/funding/me/visibility').set('Authorization', student).send({ visible: true });
+    expect(noConsent.status).toBe(400);
+    expect(noConsent.body.error.details.shareContact).toBeDefined();
+
+    const res = await request(app).put('/api/funding/me/visibility').set('Authorization', student).send({ visible: true, shareContact: true, noteToSponsors: 'Thank you for reading.' });
     expect(res.body.visible).toBe(true);
 
     const after = await request(app).get('/api/sponsor/students').set('Authorization', sponsor);
     expect(after.body.total).toBe(1);
     const card = after.body.items[0];
-    expect(card).toMatchObject({ id: appId, level: 'UNDERGRADUATE', course: 'B.Tech', state: 'Andhra Pradesh', needLevel: 'HIGH', remaining: 60000, noteToSponsors: 'Thank you for reading.' });
+    expect(card).toMatchObject({ id: appId, level: 'UNDERGRADUATE', course: 'B.Tech', state: 'Andhra Pradesh', needLevel: 'HIGH', promised: 0, remaining: 60000, noteToSponsors: 'Thank you for reading.' });
     expect(card.alias).toMatch(/^Student [A-Z2-9]{6}$/);
     expect(card.match.score).toBeGreaterThan(50);
-    // No private details reach sponsors.
+    // Before connecting, no private details reach sponsors.
     const text = JSON.stringify(after.body);
     for (const secret of ['Rahul', 'Kumar', 'Guntur', 'Gandhi Nagar', '21TEST0042', 'Test Institute', '140000', 'EB-', 'student@edubridge.test']) {
       expect(text).not.toContain(secret);
     }
   });
 
-  it('never lets pledges exceed the budget or the remaining requirement', async () => {
-    const overBudget = await request(app).post(`/api/sponsor/students/${appId}/pledge`).set('Authorization', sponsor).send({ amount: 55000 });
-    expect(overBudget.status).toBe(400);
-    const overNeed = await request(app).post(`/api/sponsor/students/${appId}/pledge`).set('Authorization', sponsor2).send({ amount: 70000 });
-    expect(overNeed.status).toBe(400);
-    expect((await request(app).post(`/api/sponsor/students/${appId}/pledge`).set('Authorization', sponsor).send({ amount: 100 })).status).toBe(400);
+  it('never lets a promise exceed the budget or the remaining requirement', async () => {
+    expect((await request(app).post(`/api/sponsor/students/${appId}/connect`).set('Authorization', sponsor).send({ amount: 55000 })).status).toBe(400);
+    expect((await request(app).post(`/api/sponsor/students/${appId}/connect`).set('Authorization', sponsor2).send({ amount: 70000 })).status).toBe(400);
+    expect((await request(app).post(`/api/sponsor/students/${appId}/connect`).set('Authorization', sponsor).send({ amount: 100 })).status).toBe(400);
   });
 
-  it('handles two sponsors pledging at the same moment without over-funding', async () => {
+  it('handles two sponsors connecting at the same moment without over-covering', async () => {
     const [a, b] = await Promise.all([
-      request(app).post(`/api/sponsor/students/${appId}/pledge`).set('Authorization', sponsor).send({ amount: 40000, messageToStudent: 'Keep going!' }),
-      request(app).post(`/api/sponsor/students/${appId}/pledge`).set('Authorization', sponsor2).send({ amount: 40000 }),
+      request(app).post(`/api/sponsor/students/${appId}/connect`).set('Authorization', sponsor).send({ amount: 40000 }),
+      request(app).post(`/api/sponsor/students/${appId}/connect`).set('Authorization', sponsor2).send({ amount: 40000 }),
     ]);
     expect([a.status, b.status].sort()).toEqual([201, 409]);
-    const doc = await Application.findById(appId).lean();
-    expect(doc!.funding!.pledged).toBe(40000);
-    // Clean up so the rest of the tests start from a known state.
+    expect((await Application.findById(appId).lean())!.funding!.promised).toBe(40000);
     const winner = a.status === 201 ? sponsor : sponsor2;
     const id = (a.status === 201 ? a : b).body.sponsorship.id;
-    expect((await request(app).post(`/api/sponsor/sponsorships/${id}/withdraw`).set('Authorization', winner)).status).toBe(200);
-    expect((await Application.findById(appId).lean())!.funding!.pledged).toBe(0);
+    expect((await request(app).post(`/api/sponsor/sponsorships/${id}/end`).set('Authorization', winner)).status).toBe(200);
+    const after = await Application.findById(appId).lean();
+    expect(after!.funding!.promised).toBe(0);
+    expect(after!.status).toBe('APPROVED');
   });
 
-  let pledgeId = '';
-  it('records a pledge, prevents duplicates, and lets the sponsor withdraw it', async () => {
-    const res = await request(app).post(`/api/sponsor/students/${appId}/pledge`).set('Authorization', sponsor).send({ amount: 40000, messageToStudent: 'Keep going!' });
+  let connectionId = '';
+  it('connects instantly and shares contact details both ways', async () => {
+    const res = await request(app).post(`/api/sponsor/students/${appId}/connect`).set('Authorization', sponsor).send({ amount: 40000, messageToStudent: 'Keep going!' });
     expect(res.status).toBe(201);
-    expect(res.body.sponsorship).toMatchObject({ status: 'PLEDGED', amount: 40000 });
+    expect(res.body.sponsorship).toMatchObject({ status: 'CONNECTED', amount: 40000, student: { contact: { fullName: 'Rahul Kumar', email: 'student@edubridge.test' } } });
     expect(res.body.sponsorship.reference).toMatch(/^SP-\d{4}-\d{6}$/);
-    pledgeId = res.body.sponsorship.id;
+    connectionId = res.body.sponsorship.id;
 
-    const dup = await request(app).post(`/api/sponsor/students/${appId}/pledge`).set('Authorization', sponsor).send({ amount: 5000 });
-    expect(dup.status).toBe(409);
+    expect((await request(app).post(`/api/sponsor/students/${appId}/connect`).set('Authorization', sponsor).send({ amount: 5000 })).status).toBe(409);
+    expect((await Application.findById(appId).lean())!.status).toBe('PARTIALLY_FUNDED');
 
     const prefs = await request(app).get('/api/sponsor/preferences').set('Authorization', sponsor);
     expect(prefs.body.profile).toMatchObject({ committed: 40000, available: 10000 });
-    const lower = await request(app).put('/api/sponsor/preferences').set('Authorization', sponsor).send({ ...prefs.body.profile, budget: 30000 });
-    expect(lower.status).toBe(400);
+    expect((await request(app).put('/api/sponsor/preferences').set('Authorization', sponsor).send({ ...prefs.body.profile, budget: 30000 })).status).toBe(400);
 
     const funding = await request(app).get('/api/funding/me').set('Authorization', student);
-    expect(funding.body).toMatchObject({ pledged: 40000, remaining: 20000 });
-    expect(funding.body.sponsorships[0].sponsor.name).toBe('Priya Sharma');
-    expect(funding.body.sponsorships[0].messageToStudent).toBe('Keep going!');
+    expect(funding.body).toMatchObject({ promised: 40000, remaining: 20000 });
+    expect(funding.body.sponsorships[0]).toMatchObject({
+      messageToStudent: 'Keep going!',
+      sponsor: { name: 'Priya Sharma', contact: { fullName: 'Priya Sharma', email: 'sponsor@edubridge.test' } },
+    });
+
+    // Other sponsors still see only the anonymised card.
+    const other = await request(app).get(`/api/sponsor/students/${appId}`).set('Authorization', sponsor2);
+    expect(JSON.stringify(other.body)).not.toContain('Rahul');
   });
 
-  it('lets an admin confirm received funds, updates status and issues signed certificates', async () => {
-    expect((await request(app).post(`/api/sponsorships/${pledgeId}/confirm`).set('Authorization', sponsor).send({ receivedOn: today(), reference: 'UTR1' })).status).toBe(403);
-    const future = await request(app).post(`/api/sponsorships/${pledgeId}/confirm`).set('Authorization', admin).send({ receivedOn: '2999-01-01', reference: 'UTR1' });
-    expect(future.status).toBe(400);
-
-    const res = await request(app).post(`/api/sponsorships/${pledgeId}/confirm`).set('Authorization', admin).send({ receivedOn: today(), reference: 'UTR123456' });
-    expect(res.status).toBe(200);
-    expect(res.body.sponsorship).toMatchObject({ status: 'CONFIRMED', student: { name: 'Rahul Kumar' }, sponsor: { email: 'sponsor@edubridge.test' } });
-    expect((await request(app).post(`/api/sponsorships/${pledgeId}/confirm`).set('Authorization', admin).send({ receivedOn: today(), reference: 'x' })).status).toBe(409);
-
-    const a = await Application.findById(appId).lean();
-    expect(a!.status).toBe('PARTIALLY_FUNDED');
-    expect(a!.funding).toMatchObject({ pledged: 0, confirmed: 40000 });
-
-    const funding = await request(app).get('/api/funding/me').set('Authorization', student);
-    const cert = funding.body.sponsorships[0].certificate;
-    expect(funding.body.sponsorships[0].confirmation.reference).toBeUndefined();
-    expect(cert.number).toMatch(/^EBC-\d{4}-\d{6}$/);
-
-    const verified = await request(app).get(`/api/certificates/${cert.number}?code=${cert.code}`);
-    expect(verified.status).toBe(200);
-    expect(verified.body.certificate).toMatchObject({ kind: 'STUDENT_AWARD', status: 'VALID', studentName: 'Rahul Kumar', sponsorName: 'Priya Sharma', amount: 40000, signature: { valid: true } });
-    expect((await request(app).get(`/api/certificates/${cert.number}?code=WRONGCODE1`)).status).toBe(404);
-
-    const mine = await request(app).get('/api/sponsor/sponsorships').set('Authorization', sponsor);
-    const sponsorCert = mine.body.items[0].certificate;
-    const sc = await request(app).get(`/api/certificates/${sponsorCert.number}?code=${sponsorCert.code}`);
-    expect(sc.body.certificate.kind).toBe('SPONSOR_ACKNOWLEDGEMENT');
-    expect(sc.body.certificate.studentName).toBeUndefined();
-
-    // Tampering with stored contents breaks the signature.
-    await Certificate.updateOne({ number: cert.number }, { $set: { 'payload.amount': 99999 } });
-    const tampered = await request(app).get(`/api/certificates/${cert.number}?code=${cert.code}`);
-    expect(tampered.body.certificate.signature.valid).toBe(false);
-    await Certificate.updateOne({ number: cert.number }, { $set: { 'payload.amount': 40000 } });
-  });
-
-  it('hides the sponsor’s name from the student when asked and marks the application fully funded', async () => {
-    const res = await request(app).post(`/api/sponsor/students/${appId}/pledge`).set('Authorization', sponsor2).send({ amount: 20000 });
+  it('marks the student fully supported and removes them from the list', async () => {
+    const res = await request(app).post(`/api/sponsor/students/${appId}/connect`).set('Authorization', sponsor2).send({ amount: 20000 });
     expect(res.status).toBe(201);
-    await request(app).post(`/api/sponsorships/${res.body.sponsorship.id}/confirm`).set('Authorization', admin).send({ receivedOn: today(), reference: 'UTR777' });
     expect((await Application.findById(appId).lean())!.status).toBe('FULLY_FUNDED');
-
-    const funding = await request(app).get('/api/funding/me').set('Authorization', student);
-    expect(funding.body.remaining).toBe(0);
-    const s2 = funding.body.sponsorships.find((s: { amount: number }) => s.amount === 20000);
-    expect(s2.sponsor).toMatchObject({ name: 'An EduBridge sponsor', anonymous: true });
-    expect(JSON.stringify(funding.body)).not.toContain('Kavya');
-
-    // Fully funded students no longer appear in discovery.
-    expect((await request(app).get('/api/sponsor/students').set('Authorization', sponsor).send()).body.total).toBe(0);
+    expect((await request(app).get('/api/sponsor/students').set('Authorization', sponsor)).body.total).toBe(0);
 
     const overview = await request(app).get('/api/sponsorships/overview').set('Authorization', admin);
-    expect(overview.body.totals).toMatchObject({ confirmed: 60000, pledged: 0, remaining: 0, fullyFunded: 1 });
+    expect(overview.body.totals).toMatchObject({ promised: 60000, remaining: 0, fullySupported: 1 });
+    expect(overview.body.counts).toMatchObject({ CONNECTED: 2, ENDED: 1 });
   });
 
-  it('lets an admin cancel a confirmed sponsorship, revoking its certificates', async () => {
-    const res = await request(app).post(`/api/sponsorships/${pledgeId}/cancel`).set('Authorization', admin).send({ reason: 'Funds returned to the sponsor.' });
+  it('lets an admin end a connection, which hides contact details again', async () => {
+    expect((await request(app).post(`/api/sponsorships/${connectionId}/end`).set('Authorization', sponsor).send({})).status).toBe(403);
+    const res = await request(app).post(`/api/sponsorships/${connectionId}/end`).set('Authorization', admin).send({ reason: 'Sponsor asked to stop.' });
     expect(res.status).toBe(200);
-    expect(res.body.sponsorship.status).toBe('CANCELLED');
+    expect(res.body.sponsorship).toMatchObject({ status: 'ENDED', endReason: 'BY_ADMIN', endNote: 'Sponsor asked to stop.' });
+    expect((await request(app).post(`/api/sponsorships/${connectionId}/end`).set('Authorization', admin).send({})).status).toBe(409);
     expect((await Application.findById(appId).lean())!.status).toBe('PARTIALLY_FUNDED');
-    const certs = await Certificate.find({ sponsorship: pledgeId }).lean();
-    expect(certs.every((c) => c.revokedAt)).toBe(true);
-    const prefs = await request(app).get('/api/sponsor/preferences').set('Authorization', sponsor);
-    expect(prefs.body.profile).toMatchObject({ committed: 0, confirmed: 0 });
+
+    const mine = await request(app).get('/api/sponsor/sponsorships').set('Authorization', sponsor);
+    expect(mine.body.items.find((s: { id: string }) => s.id === connectionId).student.contact).toBeUndefined();
+    const funding = await request(app).get('/api/funding/me').set('Authorization', student);
+    const ended = funding.body.sponsorships.find((s: { id: string }) => s.id === connectionId);
+    expect(ended.sponsor.contact).toBeUndefined();
+    expect(ended.endNote).toBeUndefined();
+    expect((await request(app).get('/api/sponsor/preferences').set('Authorization', sponsor)).body.profile.committed).toBe(0);
   });
 
-  it('releases pledges that were not confirmed in time', async () => {
-    const res = await request(app).post(`/api/sponsor/students/${appId}/pledge`).set('Authorization', sponsor).send({ amount: 10000 });
-    expect(res.status).toBe(201);
-    await Sponsorship.updateOne({ _id: res.body.sponsorship.id }, { $set: { expiresAt: new Date(Date.now() - 1000) } });
-    const list = await request(app).get('/api/sponsor/sponsorships').set('Authorization', sponsor);
-    expect(list.body.items.find((s: { id: string }) => s.id === res.body.sponsorship.id)).toMatchObject({ status: 'CANCELLED', cancelReason: 'EXPIRED' });
-    expect((await Application.findById(appId).lean())!.funding!.pledged).toBe(0);
+  it('asks students who agreed before contact sharing to agree again', async () => {
+    await Application.updateOne({ _id: appId }, { $unset: { 'sponsorVisibility.shareContact': 1 } });
+    const funding = await request(app).get('/api/funding/me').set('Authorization', student);
+    expect(funding.body).toMatchObject({ visible: false, needsNewConsent: true });
+    expect((await request(app).get('/api/sponsor/students').set('Authorization', sponsor)).body.total).toBe(0);
+    await request(app).put('/api/funding/me/visibility').set('Authorization', student).send({ visible: true, shareContact: true });
   });
 
-  it('lets the sponsor send money straight to the student’s bank account and the student confirm it', async () => {
-    const ACCOUNT = '123456789012';
-    const res = await request(app).post(`/api/sponsor/students/${appId}/pledge`).set('Authorization', sponsor).send({ amount: 30000 });
-    expect(res.status).toBe(201);
-    const id = res.body.sponsorship.id;
-    expect(res.body.sponsorship.studentBankReady).toBe(false);
-
-    // Nothing can be sent until the student has added bank details.
-    const noBank = await request(app).get(`/api/sponsor/sponsorships/${id}/bank-details`).set('Authorization', sponsor);
-    expect(noBank.body.error.code).toBe('BANK_DETAILS_MISSING');
-    expect((await request(app).post(`/api/sponsor/sponsorships/${id}/sent`).set('Authorization', sponsor).send({ sentOn: today(), reference: 'UTR0001' })).status).toBe(409);
-
-    const bad = await request(app).put('/api/funding/me/bank-details').set('Authorization', student).send({ accountHolderName: 'Rahul Kumar', accountNumber: ACCOUNT, ifsc: 'BAD', bankName: 'State Bank of India' });
-    expect(bad.status).toBe(400);
-    const saved = await request(app).put('/api/funding/me/bank-details').set('Authorization', student).send({ accountHolderName: 'Rahul Kumar', accountNumber: '1234 5678 9012', ifsc: 'sbin0001234', bankName: 'State Bank of India' });
-    expect(saved.status).toBe(200);
-    expect(saved.body.bankDetails).toMatchObject({ accountNumberLast4: '9012', ifsc: 'SBIN0001234' });
-    expect(JSON.stringify(saved.body)).not.toContain(ACCOUNT);
-    // Stored encrypted, never in the audit log.
-    const { BankAccount } = await import('../src/modules/sponsorship/models');
-    expect(JSON.stringify(await BankAccount.find().lean())).not.toContain(ACCOUNT);
-
-    // Only this sponsor can see the full details, and only while the money is still to be sent.
-    expect((await request(app).get(`/api/sponsor/sponsorships/${id}/bank-details`).set('Authorization', sponsor2)).status).toBe(404);
-    const bank = await request(app).get(`/api/sponsor/sponsorships/${id}/bank-details`).set('Authorization', sponsor);
-    expect(bank.body.bankDetails).toEqual({ accountHolderName: 'Rahul Kumar', accountNumber: ACCOUNT, ifsc: 'SBIN0001234', bankName: 'State Bank of India' });
-
-    const sent = await request(app).post(`/api/sponsor/sponsorships/${id}/sent`).set('Authorization', sponsor).send({ sentOn: today(), reference: 'UTR0001' });
-    expect(sent.status).toBe(200);
-    expect(sent.body.items.find((s: { id: string }) => s.id === id)).toMatchObject({ status: 'SENT', payment: { reference: 'UTR0001', toAccountLast4: '9012' } });
-    expect((await request(app).post(`/api/sponsor/sponsorships/${id}/withdraw`).set('Authorization', sponsor)).status).toBe(409);
-    // Sent money does not expire.
-    expect((await Sponsorship.findById(id).lean())!.expiresAt).toBeUndefined();
-
-    // The student reports it missing; the sponsor can then record a corrected transfer.
-    const missing = await request(app).post(`/api/funding/me/sponsorships/${id}/not-received`).set('Authorization', student).send({ note: 'Nothing in my account yet.' });
-    expect(missing.body.sponsorships.find((s: { id: string }) => s.id === id).payment.notReceived.note).toBe('Nothing in my account yet.');
-    const admins = await request(app).get('/api/sponsorships').set('Authorization', admin);
-    expect(admins.body.items[0].id).toBe(id);
-    const resent = await request(app).post(`/api/sponsor/sponsorships/${id}/sent`).set('Authorization', sponsor).send({ sentOn: today(), reference: 'UTR0002' });
-    expect(resent.body.items.find((s: { id: string }) => s.id === id).payment).toMatchObject({ reference: 'UTR0002' });
-    expect(resent.body.items.find((s: { id: string }) => s.id === id).payment.notReceived).toBeUndefined();
-
-    // Another student cannot confirm it; this student can, with no administrator involved.
-    const received = await request(app).post(`/api/funding/me/sponsorships/${id}/received`).set('Authorization', student);
-    expect(received.status).toBe(200);
-    const mine = received.body.sponsorships.find((s: { id: string }) => s.id === id);
-    expect(mine).toMatchObject({ status: 'CONFIRMED', confirmation: { byStudent: true } });
-    expect(mine.certificate.number).toMatch(/^EBC-/);
-    expect(received.body).toMatchObject({ confirmed: 50000, pledged: 0 });
-    expect((await request(app).post(`/api/funding/me/sponsorships/${id}/received`).set('Authorization', student)).status).toBe(409);
-    expect((await request(app).get(`/api/sponsor/sponsorships/${id}/bank-details`).set('Authorization', sponsor)).status).toBe(409);
-
-    const logs = JSON.stringify(await AuditLog.find({ action: { $in: ['BANK_DETAILS_SAVED', 'BANK_DETAILS_VIEWED'] } }).lean());
-    expect(logs).not.toContain(ACCOUNT);
-  });
-
-  it('records every sponsorship activity in the audit log', async () => {
+  it('records connections in the audit log', async () => {
     const actions = await AuditLog.distinct('action');
-    for (const a of ['SPONSOR_PREFERENCES_UPDATED', 'SPONSOR_VISIBILITY_CHANGED', 'SPONSORSHIP_PLEDGED', 'SPONSORSHIP_CONFIRMED', 'SPONSORSHIP_CANCELLED', 'SPONSORSHIP_EXPIRED', 'CERTIFICATE_ISSUED', 'CERTIFICATE_REVOKED', 'BANK_DETAILS_SAVED', 'BANK_DETAILS_VIEWED', 'SPONSORSHIP_SENT', 'SPONSORSHIP_NOT_RECEIVED']) {
-      expect(actions).toContain(a);
-    }
+    for (const a of ['SPONSOR_PREFERENCES_UPDATED', 'SPONSOR_VISIBILITY_CHANGED', 'SPONSOR_CONNECTED', 'CONNECTION_ENDED']) expect(actions).toContain(a);
+  });
+
+  it('converts records from the old payment flow', async () => {
+    const db = Application.db.db!;
+    const app2 = await Application.findById(appId).lean();
+    const base = { application: app2!._id, student: app2!.student, academicYear: app2!.academicYear, sponsorName: 'Old Sponsor', createdAt: new Date(), updatedAt: new Date() };
+    const sponsorUser = (await SponsorProfile.findOne().lean())!.user;
+    await Sponsorship.collection.insertMany([
+      { ...base, reference: 'SP-OLD-1', sponsor: sponsorUser, amount: 1000, status: 'CONFIRMED', active: true, payment: { reference: 'UTR' }, showNameToStudent: false },
+      { ...base, reference: 'SP-OLD-2', sponsor: sponsorUser, amount: 2000, status: 'CANCELLED', cancellation: { reason: 'EXPIRED', at: new Date(), wasConfirmed: false } },
+    ]);
+    await Application.collection.updateOne({ _id: app2!._id }, { $set: { funding: { pledged: 5, confirmed: 7 } } });
+    await db.createCollection('bankaccounts');
+
+    await migrateToConnections();
+
+    const old1 = await Sponsorship.collection.findOne({ reference: 'SP-OLD-1' });
+    expect(old1).toMatchObject({ status: 'CONNECTED', active: true });
+    expect(old1!.payment).toBeUndefined();
+    expect((await Sponsorship.collection.findOne({ reference: 'SP-OLD-2' }))!.status).toBe('ENDED');
+    // Promised = the remaining sponsor2 connection (20000) + the converted one (1000).
+    expect((await Application.collection.findOne({ _id: app2!._id }))!.funding).toEqual({ promised: 21000 });
+    expect(await db.listCollections({ name: 'bankaccounts' }).toArray()).toHaveLength(0);
+
+    // Running it again changes nothing.
+    await migrateToConnections();
+    expect((await Application.collection.findOne({ _id: app2!._id }))!.funding).toEqual({ promised: 21000 });
   });
 });

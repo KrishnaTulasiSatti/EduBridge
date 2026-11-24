@@ -14,7 +14,7 @@ import { cn, formatINR, timeAgo } from '@/lib/utils';
 const TRENDS = [
   { key: 'submitted', title: 'Applications submitted', unit: 'applications submitted', money: false },
   { key: 'decided', title: 'Decisions made', unit: 'eligibility decisions', money: false },
-  { key: 'confirmedAmount', title: 'Sponsorship confirmed', unit: 'confirmed', money: true },
+  { key: 'promisedAmount', title: 'Support promised', unit: 'promised', money: true },
 ] as const;
 
 const SECURITY_ROWS: { action: string; help: string }[] = [
@@ -131,12 +131,12 @@ function Dashboard({ data }: { data: AnalyticsDTO }) {
       </div>
 
       <Card>
-        <CardHeader title="Sponsorship" description="Approved amounts, and how much of them sponsors have pledged or the platform has confirmed as received." />
+        <CardHeader title="Sponsorship" description="Approved amounts, and how much of them sponsors have promised by connecting with students." />
         <CardBody className="space-y-6">
           <div className="grid grid-cols-2 gap-x-8 gap-y-4 sm:grid-cols-4">
-            <Figure label="Eligible for sponsorship" value={n(s.eligibleStudents)} hint="Approved, not yet fully funded" />
+            <Figure label="Eligible for sponsorship" value={n(s.eligibleStudents)} hint="Approved, not yet fully supported" />
             <Figure label="Shown to sponsors" value={n(s.visibleToSponsors)} hint="Students who gave consent" />
-            <Figure label="Fully funded" value={n(s.fullyFunded)} />
+            <Figure label="Fully supported" value={n(s.fullySupported)} />
             <Figure label="Sponsors" value={n(s.sponsors)} hint={s.sponsors ? `${formatINR(s.sponsorBudget)} total budget` : undefined} />
           </div>
           {s.approvedAmount > 0 ? (
@@ -148,8 +148,7 @@ function Dashboard({ data }: { data: AnalyticsDTO }) {
               <SegmentBar
                 format={formatINR}
                 parts={[
-                  { label: 'Confirmed', value: s.confirmedAmount, strength: 100, help: `${n(s.confirmed.count)} sponsorship${s.confirmed.count === 1 ? '' : 's'}, funds received` },
-                  { label: 'Pledged, awaiting funds', value: s.pledgedAmount, strength: 45, help: `${n(s.pledges.count)} pledge${s.pledges.count === 1 ? '' : 's'}, reserved for 14 days` },
+                  { label: 'Promised', value: s.promisedAmount, strength: 100, help: `${n(s.connected.count)} active connection${s.connected.count === 1 ? '' : 's'}` },
                   { label: 'Still needed', value: s.remainingAmount, strength: 0, help: 'Remaining sponsorship requirement' },
                 ]}
               />
@@ -157,9 +156,9 @@ function Dashboard({ data }: { data: AnalyticsDTO }) {
           ) : (
             <p className="text-sm text-muted-foreground">No applications have been approved for sponsorship yet.</p>
           )}
-          {s.cancelled.count > 0 && (
+          {s.ended.count > 0 && (
             <p className="text-[13px] text-subtle">
-              {n(s.cancelled.count)} pledge{s.cancelled.count === 1 ? '' : 's'} withdrawn, cancelled or expired ({formatINR(s.cancelled.amount)}); not counted above.
+              {n(s.ended.count)} connection{s.ended.count === 1 ? '' : 's'} ended ({formatINR(s.ended.amount)}); not counted above.
             </p>
           )}
         </CardBody>

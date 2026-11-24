@@ -5,7 +5,6 @@ import { AuditLog } from '../audit/audit.model';
 import { AUDIT_ACTIONS } from '../audit/audit.service';
 import { User } from '../auth/user.model';
 import { SponsorProfile, Sponsorship } from '../sponsorship/models';
-import { releaseExpired } from '../sponsorship/sponsorship.service';
 
 const FUNDABLE: ApplicationStatus[] = ['APPROVED', 'PARTIALLY_FUNDED', 'FULLY_FUNDED'];
 const SECURITY_ACTIONS = [
@@ -18,9 +17,7 @@ const SECURITY_ACTIONS = [
 const ADMIN_ACTIONS = [
   AUDIT_ACTIONS.APPLICATION_DECIDED,
   AUDIT_ACTIONS.USER_STATUS_CHANGED,
-  AUDIT_ACTIONS.SPONSORSHIP_CONFIRMED,
-  AUDIT_ACTIONS.SPONSORSHIP_CANCELLED,
-  AUDIT_ACTIONS.CERTIFICATE_REVOKED,
+  AUDIT_ACTIONS.CONNECTION_ENDED,
   AUDIT_ACTIONS.MODEL_TRAINED,
   AUDIT_ACTIONS.AUDIT_EXPORTED,
   AUDIT_ACTIONS.DOCUMENTS_PURGED,
@@ -53,7 +50,6 @@ async function monthly(model: typeof Application | typeof Sponsorship, dateField
 }
 
 export async function platformAnalytics(): Promise<AnalyticsDTO> {
-  await releaseExpired();
   const months = lastMonths(12);
   const since = new Date(`${months[0]}-01T00:00:00.000Z`);
   const last30 = new Date(Date.now() - 30 * DAY);
@@ -69,7 +65,7 @@ export async function platformAnalytics(): Promise<AnalyticsDTO> {
     sponsorBudget,
     submittedByMonth,
     decidedByMonth,
-    confirmedByMonth,
+    promisedByMonth,
     volunteerRows,
     volunteers,
     securityRows,
@@ -88,17 +84,16 @@ export async function platformAnalytics(): Promise<AnalyticsDTO> {
       { $match: { 'decision.decision': 'APPROVED' } },
       { $group: { _id: '$decision.needLevel', n: { $sum: 1 } } },
     ]),
-    Application.aggregate<{ approved: number; pledged: number; confirmed: number; eligible: number; visible: number }>([
+    Application.aggregate<{ approved: number; promised: number; eligible: number; visible: number }>([
       { $match: { status: { $in: FUNDABLE } } },
       {
         $group: {
           _id: null,
           approved: { $sum: { $ifNull: ['$decision.approvedAmount', 0] } },
-          pledged: { $sum: { $ifNull: ['$funding.pledged', 0] } },
-          confirmed: { $sum: { $ifNull: ['$funding.confirmed', 0] } },
+          promised: { $sum: { $ifNull: ['$funding.promised', 0] } },
           eligible: { $sum: { $cond: [{ $in: ['$status', ['APPROVED', 'PARTIALLY_FUNDED']] }, 1, 0] } },
           visible: {
-            $sum: { $cond: [{ $and: [{ $in: ['$status', ['APPROVED', 'PARTIALLY_FUNDED']] }, { $eq: ['$sponsorVisibility.visible', true] }] }, 1, 0] },
+            $sum: { $cond: [{ $and: [{ $in: ['$status', ['APPROVED', 'PARTIALLY_FUNDED']] }, { $eq: ['$sponsorVisibility.visible', true] }, { $eq: ['$sponsorVisibility.shareContact', true] }] }, 1, 0] },
           },
         },
       },
@@ -109,7 +104,7 @@ export async function platformAnalytics(): Promise<AnalyticsDTO> {
     ]),
     monthly(Application, 'submittedAt', {}, since),
     monthly(Application, 'decision.at', {}, since),
-    monthly(Sponsorship, 'confirmation.at', { status: 'CONFIRMED' }, since, 'amount'),
+    monthly(Sponsorship, 'createdAt', { status: 'CONNECTED' }, since, 'amount'),
     // Volunteer verification activity over the last 30 days, from the audit log.
     AuditLog.aggregate<{ _id: { actor: Types.ObjectId; action: string }; n: number; last: Date }>([
       {
@@ -132,7 +127,7 @@ export async function platformAnalytics(): Promise<AnalyticsDTO> {
   const count = (rows: { _id: string; n: number }[], key: string) => rows.find((r) => r._id === key)?.n ?? 0;
   const applications = Object.fromEntries(APPLICATION_STATUSES.map((s) => [s, count(statusRows, s)])) as Record<ApplicationStatus, number>;
   const submitted = APPLICATION_STATUSES.filter((s) => s !== 'DRAFT').reduce((sum, s) => sum + applications[s], 0);
-  const funding = fundingRows[0] ?? { approved: 0, pledged: 0, confirmed: 0, eligible: 0, visible: 0 };
+  const funding = fundingRows[0] ?? { approved: 0, promised: 0, eligible: 0, visible: 0 };
   const budget = sponsorBudget[0] ?? { budget: 0, committed: 0, sponsors: 0 };
   const sp = (s: string) => sponsorshipRows.find((r) => r._id === s) ?? { n: 0, amount: 0 };
 
@@ -186,23 +181,21 @@ export async function platformAnalytics(): Promise<AnalyticsDTO> {
     sponsorship: {
       eligibleStudents: funding.eligible,
       visibleToSponsors: funding.visible,
-      fullyFunded: applications.FULLY_FUNDED,
+      fullySupported: applications.FULLY_FUNDED,
       approvedAmount: funding.approved,
-      pledgedAmount: funding.pledged,
-      confirmedAmount: funding.confirmed,
-      remainingAmount: Math.max(0, funding.approved - funding.confirmed - funding.pledged),
+      promisedAmount: funding.promised,
+      remainingAmount: Math.max(0, funding.approved - funding.promised),
       sponsors: budget.sponsors,
       sponsorBudget: budget.budget,
       sponsorCommitted: budget.committed,
-      pledges: { count: sp('PLEDGED').n + sp('SENT').n, amount: sp('PLEDGED').amount + sp('SENT').amount },
-      confirmed: { count: sp('CONFIRMED').n, amount: sp('CONFIRMED').amount },
-      cancelled: { count: sp('CANCELLED').n, amount: sp('CANCELLED').amount },
+      connected: { count: sp('CONNECTED').n, amount: sp('CONNECTED').amount },
+      ended: { count: sp('ENDED').n, amount: sp('ENDED').amount },
     },
     trend: months.map((m) => ({
       month: m,
       submitted: submittedByMonth.get(m)?.n ?? 0,
       decided: decidedByMonth.get(m)?.n ?? 0,
-      confirmedAmount: confirmedByMonth.get(m)?.sum ?? 0,
+      promisedAmount: promisedByMonth.get(m)?.sum ?? 0,
     })),
     volunteerActivity: [...people.values()].sort((a, b) => b.checks + b.reviews - (a.checks + a.reviews) || a.name.localeCompare(b.name)),
     securityLast30Days: Object.fromEntries(SECURITY_ACTIONS.map((a) => [a, count(securityRows, a)])),

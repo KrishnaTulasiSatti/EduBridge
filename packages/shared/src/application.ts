@@ -80,8 +80,8 @@ export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
   APPROVED: 'Approved',
   ON_HOLD: 'On hold',
   REJECTED: 'Not approved',
-  PARTIALLY_FUNDED: 'Partially funded',
-  FULLY_FUNDED: 'Fully funded',
+  PARTIALLY_FUNDED: 'Partly supported',
+  FULLY_FUNDED: 'Fully supported',
 };
 
 export const DOCUMENT_TYPES = ['MARKSHEET', 'INCOME_CERTIFICATE', 'COLLEGE_ID'] as const;

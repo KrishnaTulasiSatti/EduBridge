@@ -140,14 +140,14 @@ const applicationSchema = new Schema(
       ),
       default: undefined,
     },
-    /** Running totals of pledged and confirmed sponsorships (kept in step with Sponsorship records inside transactions). */
+    /** Total promised by connected sponsors (kept in step with Sponsorship records inside transactions). */
     funding: {
-      type: new Schema({ pledged: { type: Number, default: 0 }, confirmed: { type: Number, default: 0 } }, { _id: false }),
+      type: new Schema({ promised: { type: Number, default: 0 } }, { _id: false }),
       default: undefined,
     },
-    /** The student's consent to show their anonymised profile to sponsors once approved. */
+    /** The student's consent to show their anonymised profile to sponsors once approved, and to share contact details with sponsors who connect. */
     sponsorVisibility: {
-      type: new Schema({ visible: { type: Boolean, required: true }, at: { type: Date, required: true }, noteToSponsors: String }, { _id: false }),
+      type: new Schema({ visible: { type: Boolean, required: true }, shareContact: Boolean, at: { type: Date, required: true }, noteToSponsors: String }, { _id: false }),
       default: undefined,
     },
     /** Preliminary recommendation handed to the administrator. */

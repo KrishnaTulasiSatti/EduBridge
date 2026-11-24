@@ -9,7 +9,7 @@ const STAGES = [
   { key: 'VOLUNTEER_REVIEWED', title: 'Volunteer review', current: 'A volunteer is comparing your documents with your application.' },
   { key: 'ASSESSED', title: 'Need assessment', current: 'Your financial need is being assessed.' },
   { key: 'APPROVED', title: 'Eligibility decision', current: 'An administrator is reviewing your application.' },
-  { key: 'FULLY_FUNDED', title: 'Sponsorship', current: 'Show your anonymised profile to sponsors from the Sponsorship page. Funding appears there as sponsors pledge.' },
+  { key: 'FULLY_FUNDED', title: 'Sponsorship', current: 'Show your profile to sponsors from the Sponsorship page. Sponsors who connect with you appear there with their contact details.' },
 ] as const;
 
 /** How many stages are complete for each status. The stage after them is the current one. */

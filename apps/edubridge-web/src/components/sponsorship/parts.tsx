@@ -1,8 +1,10 @@
+import { Mail, Phone } from 'lucide-react';
 import {
-  CANCEL_REASON_LABELS,
+  END_REASON_LABELS,
   EXPENSE_KEYS,
   EXPENSE_LABELS,
   SPONSORSHIP_STATUS_LABELS,
+  type ContactDTO,
   type ExpenseKey,
   type MatchResult,
   type SponsorshipDTO,
@@ -10,10 +12,9 @@ import {
 } from '@edubridge/shared';
 import { Badge, Dot, type BadgeTone } from '@/components/ui/badge';
 import { formatDate } from '@/lib/student';
-import { daysLeft } from '@/lib/sponsorship';
 import { cn, formatINR } from '@/lib/utils';
 
-const STATUS_TONE: Record<SponsorshipStatus, BadgeTone> = { PLEDGED: 'info', SENT: 'warning', CONFIRMED: 'success', CANCELLED: 'neutral' };
+const STATUS_TONE: Record<SponsorshipStatus, BadgeTone> = { CONNECTED: 'success', ENDED: 'neutral' };
 
 export function SponsorshipStatusBadge({ status }: { status: SponsorshipStatus }) {
   return (
@@ -23,57 +24,48 @@ export function SponsorshipStatusBadge({ status }: { status: SponsorshipStatus }
   );
 }
 
-/** One line explaining where a sponsorship stands. */
+/** One line explaining where a connection stands. */
 export function sponsorshipStatusLine(s: SponsorshipDTO) {
-  if (s.status === 'PLEDGED') {
-    const d = daysLeft(s.expiresAt);
-    return `Pledged ${formatDate(s.createdAt)} · money to be sent (${d} day${d === 1 ? '' : 's'} left)`;
-  }
-  if (s.status === 'SENT') {
-    return s.payment?.notReceived
-      ? `Sent ${formatDate(s.payment.sentOn)} · student reported it has not arrived`
-      : `Sent ${formatDate(s.payment?.sentOn)} · waiting for the student to confirm`;
-  }
-  if (s.status === 'CONFIRMED') {
-    return `Received ${formatDate(s.confirmation?.receivedOn)}${s.confirmation?.byStudent ? ' · confirmed by the student' : ' · confirmed by an administrator'}`;
-  }
-  return `${s.cancelReason ? CANCEL_REASON_LABELS[s.cancelReason] : 'Cancelled'} · ${formatDate(s.cancelledAt)}`;
+  if (s.status === 'CONNECTED') return `Connected ${formatDate(s.createdAt)}`;
+  return `${s.endReason ? END_REASON_LABELS[s.endReason] : 'Ended'} · ${formatDate(s.endedAt)}`;
 }
 
-/** Confirmed and pledged amounts against the approved requirement. */
-export function FundingBar({
-  approved,
-  confirmed,
-  pledged,
-  className,
-  compact,
-}: {
-  approved: number;
-  confirmed: number;
-  pledged: number;
-  className?: string;
-  compact?: boolean;
-}) {
-  const pct = (n: number) => (approved > 0 ? Math.min(100, (n / approved) * 100) : 0);
-  const remaining = Math.max(0, approved - confirmed - pledged);
+/** Name, email and phone, shared between a sponsor and a student while they are connected. */
+export function ContactCard({ contact, className }: { contact: ContactDTO; className?: string }) {
+  return (
+    <div className={cn('rounded-lg border border-border bg-sunken/40 px-4 py-3 text-sm', className)}>
+      <p className="font-medium">{contact.fullName}</p>
+      <div className="mt-1.5 flex flex-wrap gap-x-5 gap-y-1 text-muted-foreground">
+        <a href={`mailto:${contact.email}`} className="inline-flex items-center gap-1.5 hover:text-foreground hover:underline">
+          <Mail className="size-3.5" /> {contact.email}
+        </a>
+        {contact.phone && (
+          <a href={`tel:+91${contact.phone}`} className="inline-flex items-center gap-1.5 hover:text-foreground hover:underline">
+            <Phone className="size-3.5" /> +91 {contact.phone}
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Amount promised by connected sponsors against the approved requirement. */
+export function FundingBar({ approved, promised, className, compact }: { approved: number; promised: number; className?: string; compact?: boolean }) {
+  const pct = approved > 0 ? Math.min(100, (promised / approved) * 100) : 0;
+  const remaining = Math.max(0, approved - promised);
   return (
     <div className={className}>
       <div
-        className={cn('flex overflow-hidden rounded-full bg-[var(--chart-track)]', compact ? 'h-1.5' : 'h-2.5')}
+        className={cn('overflow-hidden rounded-full bg-[var(--chart-track)]', compact ? 'h-1.5' : 'h-2.5')}
         role="img"
-        aria-label={`${formatINR(confirmed)} confirmed and ${formatINR(pledged)} pledged of ${formatINR(approved)}`}
+        aria-label={`${formatINR(promised)} promised of ${formatINR(approved)}`}
       >
-        <div className="h-full bg-[var(--chart)]" style={{ width: `${pct(confirmed)}%` }} />
-        <div className="h-full bg-[color-mix(in_srgb,var(--chart)_45%,var(--surface))]" style={{ width: `${pct(pledged)}%` }} />
+        <div className="h-full bg-[var(--chart)]" style={{ width: `${pct}%` }} />
       </div>
       {!compact && (
         <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1.5 text-[13px] text-muted-foreground">
           <span className="flex items-center gap-1.5">
-            <span className="size-2 rounded-full bg-[var(--chart)]" /> Confirmed <span className="tabular-nums text-foreground">{formatINR(confirmed)}</span>
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="size-2 rounded-full bg-[color-mix(in_srgb,var(--chart)_45%,var(--surface))]" /> Pledged{' '}
-            <span className="tabular-nums text-foreground">{formatINR(pledged)}</span>
+            <span className="size-2 rounded-full bg-[var(--chart)]" /> Promised by sponsors <span className="tabular-nums text-foreground">{formatINR(promised)}</span>
           </span>
           <span className="flex items-center gap-1.5">
             <span className="size-2 rounded-full bg-[var(--chart-track)] ring-1 ring-border" /> Still needed{' '}

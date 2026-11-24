@@ -194,7 +194,7 @@ function niceCeil(v: number) {
 }
 
 /**
- * One horizontal bar split into parts of a whole (e.g. confirmed / pledged / still needed).
+ * One horizontal bar split into parts of a whole (e.g. promised / still needed).
  * Single hue in steps of strength, separated by a 2px surface gap, with a legend that also prints the values.
  */
 export function SegmentBar({ parts, format }: { parts: { label: string; value: number; strength: number; help?: string }[]; format: (v: number) => string }) {

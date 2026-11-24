@@ -62,9 +62,9 @@ function StudentCard({ s }: { s: SponsorStudentCardDTO }) {
             {formatINR(s.remaining)} <span className="font-normal text-subtle">of {formatINR(s.approvedAmount)}</span>
           </span>
         </div>
-        <FundingBar approved={s.approvedAmount} confirmed={s.confirmed} pledged={s.pledged} compact />
+        <FundingBar approved={s.approvedAmount} promised={s.promised} compact />
         <div className="mt-4 flex items-center justify-between">
-          {s.mySponsorship ? <span className="text-[13px] text-primary-ink">You pledged {formatINR(s.mySponsorship.amount)}</span> : <span />}
+          {s.mySponsorship ? <span className="text-[13px] text-primary-ink">Connected · {formatINR(s.mySponsorship.amount)} promised</span> : <span />}
           <Link to={`/dashboard/discover/${s.id}`} className={buttonVariants({ size: 'sm', variant: s.mySponsorship ? 'ghost' : 'secondary' })}>
             View profile
           </Link>

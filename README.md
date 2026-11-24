@@ -171,36 +171,32 @@ A separate, clearly labelled simulation of a DigiLocker-style locker. It is not 
 - **Privacy**: the encrypted Aadhaar number is deleted once a final decision is made (the last 4 digits remain).
 - The ML service is called only by the EduBridge API with a shared token (`ML_SERVICE_TOKEN` in both `.env` files).
 
-## Sponsor matching, sponsorships and certificates (Phase 6)
+## Connecting sponsors with students (Phase 6)
 
-- **Student consent first**: an approved student chooses on the *Sponsorship* page to show an **anonymised profile**
-  (pseudonym such as “Student 7KQ2MD”, course, level, year, state, last exam %, need level, cost breakdown, circumstances and
-  an optional note). Name, contact details, address, college name, income figures, documents and Aadhaar are never sent to sponsors.
+EduBridge connects sponsors with approved students. It does **not** handle money: a sponsor records the amount they intend
+to give, and the sponsor and student then contact each other to arrange the support themselves.
+
+- **Student consent first**: an approved student chooses on the *Sponsorship* page to show their profile. All sponsors see an
+  anonymised profile (pseudonym such as “Student 7KQ2MD”, course, level, year, state, last exam %, need level, cost breakdown,
+  circumstances and an optional note). The student must also agree that a sponsor who connects sees their **name, email and phone
+  number**. Address, college name, income figures, documents and Aadhaar are never shared.
 - **Sponsor preferences**: budget, preferred levels, types of support (tuition, hostel, books…), states and circumstances,
-  the name to print on certificates and whether students may see it.
+  and the name students see.
 - **Matching** (rule-based, explainable): `0.30 × level + 0.30 × support category + 0.25 × budget fit + 0.15 × other preferences`.
   An empty preference means “any”. Category match is the share of the student's costs in the sponsor's preferred categories.
   Ties are broken by need level, then remaining requirement. Each student card shows why it was suggested.
-- **Pledge → send → received** (no administrator needed):
-  1. A sponsor pledges an amount (minimum ₹500). The pledge reserves it for **14 days**; if the money is not sent by then it is released automatically.
-     Sponsors can withdraw a pledge until they send the money.
-  2. The student adds their **bank account** (name, account number, IFSC, bank) on the *Sponsorship* page. The account number is
-     **encrypted at rest** (AES-256-GCM, `DATA_ENCRYPTION_KEY`); the student sees only the last 4 digits.
-  3. The sponsor clicks **Send money** on *My sponsorships*, opens the bank details (audited; shown only to that sponsor and only while the
-     money is still to be sent), transfers it by NEFT/IMPS/RTGS and records the date and **UTR**. The sponsorship becomes `SENT`.
-  4. The student checks their account and clicks **Yes, I received it**. The sponsorship becomes `CONFIRMED` and certificates are issued.
-     If it has not arrived they click **Not received yet**; the sponsor is told and can record a corrected transfer, and an administrator can
-     settle it (**Mark received** or **Cancel**).
-- **Over-allocation is impossible**: each pledge runs in a **MongoDB transaction** whose updates check
-  `pledged + confirmed + amount ≤ approved amount` and `committed + amount ≤ sponsor budget` atomically, so two sponsors pledging at
-  the same moment cannot over-fund a student. One active sponsorship per sponsor per student (partial unique index).
-- The application moves to `PARTIALLY_FUNDED` / `FULLY_FUNDED` from **confirmed** amounts; fully funded students leave discovery.
-- **Certificates**: once the money is confirmed as received, EduBridge issues a sponsor certificate of appreciation and a student award certificate.
-  Each is a canonical JSON record hashed with SHA-256 and **signed with EduBridge's Ed25519 key** (`CERTIFICATE_SIGNING_KEY`).
-  `/certificates/<number>?code=<code>` is a public, printable verification page (the random code printed on the certificate is required);
-  it re-verifies the signature and shows if the certificate was revoked. The public key is at `/api/certificates/public-key`.
-- Every action (preferences, consent, bank details saved or viewed, pledge, withdrawal, expiry, money sent, not-received report, confirmation, cancellation, certificate issue/revoke) is audited.
-- No payment gateway: sponsors transfer the money directly to the student's bank account, outside the platform. EduBridge records each step.
+- **Connect**: the sponsor enters the amount they intend to give (minimum ₹500) and clicks **Connect with this student**.
+  The connection is made at once and both sides see each other's name, email and phone number. The sponsor or an administrator
+  can **end** a connection; contact details are then hidden again and the amount becomes available to other sponsors.
+- **Over-promising is impossible**: each connection runs in a **MongoDB transaction** whose updates check
+  `promised + amount ≤ approved amount` and `committed + amount ≤ sponsor budget` atomically, so two sponsors connecting at the
+  same moment cannot over-cover a student. One active connection per sponsor per student (partial unique index).
+- The application moves to `PARTIALLY_FUNDED` / `FULLY_FUNDED` (shown as “Partly supported” / “Fully supported”) from the
+  promised amounts; fully supported students leave the list.
+- Preferences, consent, connecting and ending are all audited.
+- **Earlier data**: the API converts records from the old payment flow once at start-up (`modules/sponsorship/migrate.ts`):
+  pledges and payments become connections, cancelled ones become ended, totals are recomputed, and stored bank accounts and
+  certificates are deleted. Students who agreed to be shown before contact sharing existed are hidden until they agree again.
 
 ## Analytics, audit log explorer and security hardening (Phase 7)
 
@@ -209,7 +205,7 @@ A separate, clearly labelled simulation of a DigiLocker-style locker. It is not 
   confirmed, pledged and still-needed amounts, sponsor budgets, a 12-month trend (submissions, decisions, confirmed money),
   volunteer verification activity (last 30 days) and security events. Every figure is counted live from the database (`GET /api/analytics`).
 - **Audit log explorer** (`/dashboard/audit`, admins): filter by category, activity, role, person (name or email), record
-  (application number, sponsorship reference, certificate number or ID) and date range; open an entry to see every recorded
+  (application number, sponsorship reference or ID) and date range; open an entry to see every recorded
   detail, IP address, browser and other activity on the same record. Filters live in the URL, so other pages link to it.
   **CSV export** (up to 10,000 rows) neutralises spreadsheet formulas and is itself audited. Entries remain immutable.
 - **Security hardening**
@@ -262,7 +258,7 @@ The repository is an npm workspace. `apps/edubridge-web/vercel.json` holds the b
 - **Environment variable** `VITE_API_URL`: the public URL of the deployed EduBridge API, without `/api` (e.g. `https://edubridge-api.onrender.com`)
 
 The API (Express + MongoDB) runs as a normal Node server (e.g. Render or Railway), with `NODE_ENV=production`, `MONGODB_URI`,
-`JWT_ACCESS_SECRET`, `DATA_ENCRYPTION_KEY`, `CERTIFICATE_SIGNING_KEY` and `CLIENT_ORIGIN` set to the Vercel URL.
+`JWT_ACCESS_SECRET`, `DATA_ENCRYPTION_KEY` and `CLIENT_ORIGIN` set to the Vercel URL.
 
 ## Development phases
 
@@ -271,6 +267,6 @@ The API (Express + MongoDB) runs as a normal Node server (e.g. Render or Railway
 3. ✅ EduVault: institutions, marksheet issuing, Ed25519 signatures, consent and sharing
 4. ✅ Income and college ID verification, volunteer workspace
 5. ✅ Admin review, rule-based need assessment, ML service and model evaluation
-6. ✅ Sponsor matching, sponsorship management, certificates
+6. ✅ Sponsor matching and connecting sponsors with students
 7. ✅ Analytics dashboard, audit log explorer, security hardening
 8. End-to-end tests, demo data, deployment

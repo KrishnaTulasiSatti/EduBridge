@@ -66,7 +66,6 @@ export default function PreferencesPage() {
   const { data: profile, loading, error, setData } = useLoad(() => sponsorApi.preferences());
   const [form, setForm] = useState<SponsorPreferences & { budgetText: string }>({
     displayName: user!.fullName,
-    showNameToStudents: true,
     budget: 0,
     budgetText: '',
     levels: [],
@@ -133,7 +132,7 @@ export default function PreferencesPage() {
 
       <div className="grid items-start gap-6 lg:grid-cols-[1fr_300px]">
         <Card>
-          <Section title="Budget" description="The total you would like to give this academic year. Pledges are reserved against it.">
+          <Section title="Budget" description="The total you would like to give this academic year. The amounts you promise when connecting with students are counted against it.">
             <Field label="Total budget" htmlFor="budget" error={errors.budget} hint={profile ? `${formatINR(profile.committed)} already committed` : undefined}>
               <Input
                 id="budget"
@@ -191,18 +190,11 @@ export default function PreferencesPage() {
             )}
           </Section>
 
-          <Section title="Your name" description="Printed on your certificates. You decide whether the students you support see it.">
+          <Section title="Your name" description="Shown to the students you connect with, together with your email and phone number.">
             <div className="space-y-4">
               <Field label="Name to show" htmlFor="displayName" error={errors.displayName} hint="An organisation name is fine.">
                 <Input id="displayName" value={form.displayName} invalid={!!errors.displayName} onChange={(e) => set('displayName', e.target.value)} className="max-w-80" />
               </Field>
-              <Checkbox
-                id="showName"
-                checked={form.showNameToStudents}
-                onChange={(e) => set('showNameToStudents', e.target.checked)}
-                label="Show my name to students I support"
-                description="If unticked, students see “An EduBridge sponsor”. Applies to new pledges."
-              />
             </div>
           </Section>
 
@@ -221,8 +213,7 @@ export default function PreferencesPage() {
                 className="sm:grid-cols-1"
                 items={[
                   ['Total', formatINR(profile.budget)],
-                  ['Confirmed', formatINR(profile.confirmed)],
-                  ['Pledged, awaiting confirmation', formatINR(profile.committed - profile.confirmed)],
+                  ['Promised', formatINR(profile.committed)],
                   ['Available', <span className="font-medium">{formatINR(profile.available)}</span>],
                 ]}
               />

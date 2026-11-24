@@ -22,24 +22,23 @@ export interface AnalyticsDTO {
   documents: { awaitingReview: number; byStatus: Record<string, number> };
   approvedByNeedLevel: Record<NeedLevel, number>;
   sponsorship: {
-    /** Approved and not yet fully funded. */
+    /** Approved and not yet fully supported. */
     eligibleStudents: number;
     visibleToSponsors: number;
-    fullyFunded: number;
+    fullySupported: number;
     approvedAmount: number;
-    pledgedAmount: number;
-    confirmedAmount: number;
-    /** Approved amount not yet covered by a pledge or a confirmed sponsorship. */
+    /** Amount promised in active connections. */
+    promisedAmount: number;
+    /** Approved amount not yet promised by a sponsor. */
     remainingAmount: number;
     sponsors: number;
     sponsorBudget: number;
     sponsorCommitted: number;
-    pledges: { count: number; amount: number };
-    confirmed: { count: number; amount: number };
-    cancelled: { count: number; amount: number };
+    connected: { count: number; amount: number };
+    ended: { count: number; amount: number };
   };
   /** Last 12 calendar months (UTC), oldest first. */
-  trend: { month: string; submitted: number; decided: number; confirmedAmount: number }[];
+  trend: { month: string; submitted: number; decided: number; promisedAmount: number }[];
   /** Last 30 days. */
   volunteerActivity: {
     id: string;
@@ -120,6 +119,9 @@ export const AUDIT_ACTION_INFO: Record<string, { title: string; phrase: string; 
   MODEL_TRAINED: { title: 'Need model trained', phrase: 'trained the need model', category: 'DECISIONS' },
   SPONSOR_PREFERENCES_UPDATED: { title: 'Sponsor preferences saved', phrase: 'updated sponsor preferences', category: 'SPONSORSHIP' },
   SPONSOR_VISIBILITY_CHANGED: { title: 'Sponsor visibility changed', phrase: 'changed whether sponsors can see their profile', category: 'SPONSORSHIP' },
+  SPONSOR_CONNECTED: { title: 'Sponsor connected', phrase: 'connected with a student', category: 'SPONSORSHIP' },
+  CONNECTION_ENDED: { title: 'Connection ended', phrase: 'ended a sponsor connection', category: 'SPONSORSHIP' },
+  // Earlier payment and certificate steps, kept so older log entries still read well.
   SPONSORSHIP_PLEDGED: { title: 'Pledge made', phrase: 'pledged a sponsorship', category: 'SPONSORSHIP' },
   BANK_DETAILS_SAVED: { title: 'Bank details saved', phrase: 'saved bank details for sponsorship payments', category: 'SPONSORSHIP' },
   BANK_DETAILS_VIEWED: { title: 'Bank details shown to sponsor', phrase: 'viewed a student’s bank details to send money', category: 'SECURITY' },

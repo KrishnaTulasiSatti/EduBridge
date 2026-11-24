@@ -1,13 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import type {
-  BankDetailsForSponsorDTO,
-  BankDetailsInput,
-  CertificateDTO,
-  ConfirmSponsorshipInput,
+  ConnectInput,
   EducationLevel,
-  MarkSentInput,
   NeedLevel,
-  PledgeInput,
   SponsorPreferences,
   SponsorProfileDTO,
   SponsorStudentCardDTO,
@@ -49,20 +44,14 @@ export const sponsorApi = {
   async student(id: string) {
     return (await api.get<{ student: SponsorStudentCardDTO; available: number }>(`/sponsor/students/${id}`)).data;
   },
-  async pledge(id: string, body: PledgeInput) {
-    return (await api.post<{ sponsorship: SponsorshipDTO }>(`/sponsor/students/${id}/pledge`, body)).data.sponsorship;
+  async connect(id: string, body: ConnectInput) {
+    return (await api.post<{ sponsorship: SponsorshipDTO }>(`/sponsor/students/${id}/connect`, body)).data.sponsorship;
   },
   async sponsorships() {
     return (await api.get<{ items: SponsorshipDTO[] }>('/sponsor/sponsorships')).data.items;
   },
-  async withdraw(id: string) {
-    return (await api.post<{ items: SponsorshipDTO[] }>(`/sponsor/sponsorships/${id}/withdraw`)).data.items;
-  },
-  async bankDetails(id: string) {
-    return (await api.get<{ bankDetails: BankDetailsForSponsorDTO }>(`/sponsor/sponsorships/${id}/bank-details`)).data.bankDetails;
-  },
-  async markSent(id: string, body: MarkSentInput) {
-    return (await api.post<{ items: SponsorshipDTO[] }>(`/sponsor/sponsorships/${id}/sent`, body)).data.items;
+  async end(id: string) {
+    return (await api.post<{ items: SponsorshipDTO[] }>(`/sponsor/sponsorships/${id}/end`)).data.items;
   },
 };
 
@@ -73,36 +62,16 @@ export const fundingApi = {
   async setVisibility(body: SponsorVisibilityInput) {
     return (await api.put<StudentFundingDTO>('/funding/me/visibility', body)).data;
   },
-  async saveBankDetails(body: BankDetailsInput) {
-    return (await api.put<StudentFundingDTO>('/funding/me/bank-details', body)).data;
-  },
-  async received(id: string) {
-    return (await api.post<StudentFundingDTO>(`/funding/me/sponsorships/${id}/received`)).data;
-  },
-  async notReceived(id: string, note: string) {
-    return (await api.post<StudentFundingDTO>(`/funding/me/sponsorships/${id}/not-received`, { note })).data;
-  },
 };
 
 export const adminSponsorshipApi = {
   async overview() {
     return (await api.get<SponsorshipOverviewDTO>('/sponsorships/overview')).data;
   },
-  async confirm(id: string, body: ConfirmSponsorshipInput) {
-    return (await api.post<{ sponsorship: SponsorshipDTO }>(`/sponsorships/${id}/confirm`, body)).data.sponsorship;
-  },
-  async cancel(id: string, reason: string) {
-    return (await api.post<{ sponsorship: SponsorshipDTO }>(`/sponsorships/${id}/cancel`, { reason })).data.sponsorship;
+  async end(id: string, reason: string) {
+    return (await api.post<{ sponsorship: SponsorshipDTO }>(`/sponsorships/${id}/end`, { reason })).data.sponsorship;
   },
 };
-
-export const certificateApi = {
-  async verify(number: string, code: string) {
-    return (await api.get<{ certificate: CertificateDTO }>(`/certificates/${encodeURIComponent(number)}`, { params: { code } })).data.certificate;
-  },
-};
-
-export const certificateLink = (c: { number: string; code: string }) => `/certificates/${c.number}?code=${c.code}`;
 
 /** Generic loader: returns data, error and a reload function. */
 export function useLoad<T>(fn: () => Promise<T>, deps: unknown[] = []) {
@@ -159,4 +128,3 @@ export function useAdminSponsorships(params: { status?: SponsorshipStatus; searc
   return { data, setData, loading, error, reload: () => setTick((n) => n + 1) };
 }
 
-export const daysLeft = (iso?: string) => (iso ? Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000)) : 0);

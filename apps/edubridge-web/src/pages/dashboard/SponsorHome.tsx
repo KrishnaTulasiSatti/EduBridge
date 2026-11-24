@@ -20,7 +20,8 @@ export default function SponsorHome() {
   const prefs = useLoad(() => sponsorApi.preferences());
   const list = useLoad(() => sponsorApi.sponsorships());
   const p = prefs.data;
-  const recent = (list.data ?? []).filter((s) => s.status !== 'CANCELLED').slice(0, 5);
+  const connected = (list.data ?? []).filter((s) => s.status === 'CONNECTED');
+  const recent = connected.slice(0, 5);
 
   return (
     <>
@@ -38,8 +39,8 @@ export default function SponsorHome() {
 
       {p && (
         <div className="mb-6 grid gap-4 sm:grid-cols-3">
-          <Stat label="Confirmed support" value={formatINR(p.confirmed)} />
-          <Stat label="Pledged, not yet received" value={formatINR(p.committed - p.confirmed)} />
+          <Stat label="Students connected" value={String(connected.length)} />
+          <Stat label="Promised" value={formatINR(p.committed)} />
           <Stat label="Available to give" value={formatINR(p.available)} hint={`of ${formatINR(p.budget)} budget`} />
         </div>
       )}
@@ -75,7 +76,7 @@ export default function SponsorHome() {
             <EmptyState
               icon={HeartHandshake}
               title="No sponsorships yet"
-              text="Browse approved students that match your preferences and pledge support from their profile."
+              text="Browse approved students that match your preferences and connect with them from their profile."
             />
           ) : (
             <ul className="divide-y divide-border">

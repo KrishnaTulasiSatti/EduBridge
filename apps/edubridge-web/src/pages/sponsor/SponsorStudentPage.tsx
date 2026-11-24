@@ -5,11 +5,10 @@ import { toast } from 'sonner';
 import {
   DOCUMENT_TYPES,
   EDUCATION_LEVEL_LABELS,
-  MIN_PLEDGE,
+  MIN_SUPPORT,
   NEED_LEVEL_LABELS,
-  PLEDGE_HOLD_DAYS,
   SPECIAL_CIRCUMSTANCE_LABELS,
-  pledgeSchema,
+  connectSchema,
   type ExpenseKey,
 } from '@edubridge/shared';
 import { DefinitionList, PageHeader, Skeleton } from '@/components/dashboard/widgets';
@@ -42,7 +41,7 @@ export default function SponsorStudentPage() {
 
   const submit = async () => {
     const body = { amount: amount.trim() ? Number(amount.replace(/,/g, '')) : Number.NaN, messageToStudent: message };
-    const parsed = pledgeSchema.safeParse(body);
+    const parsed = connectSchema.safeParse(body);
     const fe: Record<string, string> = {};
     if (!parsed.success) for (const i of parsed.error.issues) fe[String(i.path[0])] ??= i.message;
     else if (parsed.data.amount > s.remaining) fe.amount = `The student needs ${formatINR(s.remaining)} more`;
@@ -53,8 +52,8 @@ export default function SponsorStudentPage() {
     }
     setBusy(true);
     try {
-      await sponsorApi.pledge(id, parsed.data);
-      toast.success('Thank you. Your pledge has been recorded.');
+      await sponsorApi.connect(id, parsed.data);
+      toast.success('You are now connected. The student’s contact details are in My sponsorships.');
       setAmount('');
       setMessage('');
       await reload();
@@ -82,13 +81,13 @@ export default function SponsorStudentPage() {
       <div className="grid items-start gap-6 lg:grid-cols-[1.4fr_1fr]">
         <div className="space-y-6">
           <Card>
-            <CardHeader title="Funding" description={`Approved for ${s.academicYear} on ${formatDate(s.approvedAt)}`} />
+            <CardHeader title="Support needed" description={`Approved for ${s.academicYear} on ${formatDate(s.approvedAt)}`} />
             <CardBody>
               <div className="flex items-baseline justify-between">
                 <p className="text-sm text-muted-foreground">Approved requirement</p>
                 <p className="text-xl font-semibold tabular-nums">{formatINR(s.approvedAmount)}</p>
               </div>
-              <FundingBar className="mt-4" approved={s.approvedAmount} confirmed={s.confirmed} pledged={s.pledged} />
+              <FundingBar className="mt-4" approved={s.approvedAmount} promised={s.promised} />
             </CardBody>
           </Card>
 
@@ -130,19 +129,16 @@ export default function SponsorStudentPage() {
             <CardHeader title="Support this student" />
             <CardBody>
               {s.mySponsorship ? (
-                <Alert tone="success" title={`You ${s.mySponsorship.status === 'CONFIRMED' ? 'are supporting' : 'pledged'} ${formatINR(s.mySponsorship.amount)}`}>
-                  {s.mySponsorship.status === 'PLEDGED'
-                    ? 'Send the money to the student’s bank account from My sponsorships.'
-                    : s.mySponsorship.status === 'SENT'
-                      ? 'You sent the money. The student will confirm once it arrives.'
-                      : 'The student received the money. Thank you.'}{' '}
+                <Alert tone="success" title={`You are connected · ${formatINR(s.mySponsorship.amount)} promised`}>
+                  The student’s name, email and phone number are in{' '}
                   <Link to="/dashboard/sponsorships" className="underline underline-offset-2">
                     My sponsorships
                   </Link>
+                  . Contact them to arrange your support.
                 </Alert>
               ) : s.remaining <= 0 ? (
                 <p className="text-sm text-muted-foreground">This student’s requirement is fully covered.</p>
-              ) : data.available < MIN_PLEDGE ? (
+              ) : data.available < MIN_SUPPORT ? (
                 <div className="space-y-3">
                   <p className="text-sm text-muted-foreground">You have {formatINR(data.available)} of your budget available.</p>
                   <Link to="/dashboard/preferences" className={buttonVariants({ variant: 'secondary', size: 'sm' })}>
@@ -152,10 +148,10 @@ export default function SponsorStudentPage() {
               ) : (
                 <div className="space-y-4">
                   <Field
-                    label="Amount"
+                    label="Amount you intend to give"
                     htmlFor="amount"
                     error={errors.amount}
-                    hint={`Between ${formatINR(MIN_PLEDGE)} and ${formatINR(max)}`}
+                    hint={`Between ${formatINR(MIN_SUPPORT)} and ${formatINR(max)}`}
                     action={
                       <button type="button" className="cursor-pointer text-[13px] text-primary-ink hover:underline" onClick={() => setAmount(max.toLocaleString('en-IN'))}>
                         {max === s.remaining ? 'Cover the rest' : 'Use available'}
@@ -174,15 +170,15 @@ export default function SponsorStudentPage() {
                       }}
                     />
                   </Field>
-                  <Field label="Message to the student" htmlFor="message" optional error={errors.messageToStudent} hint="Shown to the student with your pledge.">
+                  <Field label="Message to the student" htmlFor="message" optional error={errors.messageToStudent} hint="Shown to the student when you connect.">
                     <Textarea id="message" className="min-h-20" value={message} onChange={(e) => setMessage(e.target.value)} />
                   </Field>
                   <Button className="w-full" onClick={submit} loading={busy}>
-                    Pledge support
+                    Connect with this student
                   </Button>
                   <p className="text-[13px] leading-relaxed text-muted-foreground">
-                    Your pledge holds this amount for {PLEDGE_HOLD_DAYS} days. EduBridge will contact you about the transfer; an administrator confirms
-                    the pledge once the funds are received. You can withdraw it until then.
+                    When you connect, you and the student see each other’s name, email and phone number. You arrange the support directly; no money
+                    passes through EduBridge.
                   </p>
                 </div>
               )}
@@ -198,7 +194,7 @@ export default function SponsorStudentPage() {
 
           <p className="flex gap-2 px-1 text-[13px] leading-relaxed text-subtle">
             <ShieldCheck className="mt-0.5 size-4 shrink-0" />
-            The student’s identity, contact details, address, income and documents are not shared with sponsors.
+            The student’s name and contact details are shared only with sponsors who connect. Their address, income and documents are never shared.
           </p>
         </div>
       </div>

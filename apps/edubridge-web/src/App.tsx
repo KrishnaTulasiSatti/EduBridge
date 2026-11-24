@@ -31,7 +31,6 @@ const SponsorStudentPage = lazy(() => import('@/pages/sponsor/SponsorStudentPage
 const MySponsorshipsPage = lazy(() => import('@/pages/sponsor/MySponsorshipsPage'));
 const AnalyticsPage = lazy(() => import('@/pages/admin/AnalyticsPage'));
 const AuditLogPage = lazy(() => import('@/pages/admin/AuditLogPage'));
-const CertificatePage = lazy(() => import('@/pages/CertificatePage'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 // Pages that are not built yet render a placeholder.
@@ -83,7 +82,6 @@ export default function App() {
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
               <Route path="/register" element={<GuestRoute><RegisterPage /></GuestRoute>} />
-              <Route path="/certificates/:number" element={<CertificatePage />} />
 
               <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
                 <Route index element={<DashboardHome />} />
