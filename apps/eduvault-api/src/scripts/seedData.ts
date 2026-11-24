@@ -1,86 +1,32 @@
 import { hashPassword } from '../modules/auth/auth.service';
 import { User } from '../modules/auth/user.model';
-import { Institution, activeKey } from '../modules/institutions/institution.model';
-import { generateSigningKey } from '../modules/institutions/keys';
-import { StudentRecord } from '../modules/records/models';
 
-/** Fictional demo records — clearly labelled test data, never real people or institutions. */
-export const DEMO_PASSWORD = 'Demo@1234';
+/**
+ * The only account EduVault creates by itself: the EduVault administrator, who approves institutions.
+ * Institutions register on the EduVault website; students activate their accounts with the code their institution gives them.
+ * Set ADMIN_EMAIL / ADMIN_PASSWORD in .env to choose them; the defaults are for local development only.
+ */
+export const ADMIN_EMAIL = process.env.ADMIN_EMAIL?.trim() || 'admin@eduvault.test';
+export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Demo@1234';
 
-const INSTITUTIONS = [
-  {
-    code: 'KVCE-TEST',
-    name: 'Krishna Valley College of Engineering (Test)',
-    university: 'Coastal Technological University (Test)',
-    city: 'Vijayawada',
-    state: 'Andhra Pradesh',
-    status: 'ACTIVE' as const,
-    contact: { fullName: 'Suresh Babu', email: 'registrar@kvce.test', designation: 'Controller of Examinations' },
-  },
-  {
-    code: 'RIS-TEST',
-    name: 'Riverside Institute of Science (Test)',
-    university: 'Coastal Technological University (Test)',
-    city: 'Rajahmundry',
-    state: 'Andhra Pradesh',
-    status: 'PENDING' as const,
-    contact: { fullName: 'Anita Desai', email: 'registrar@riverside.test', designation: 'Registrar' },
-  },
-];
-
-export async function seedDemoData() {
-  const passwordHash = await hashPassword(DEMO_PASSWORD);
-  const now = new Date();
-  let created = 0;
-
-  const upsertUser = async (u: Record<string, unknown> & { email: string }) => {
-    const res = await User.updateOne(
-      { email: u.email },
-      { $setOnInsert: { ...u, passwordHash, termsAcceptedAt: now } },
-      { upsert: true },
-    );
-    created += res.upsertedCount;
-    return (await User.findOne({ email: u.email }))!;
-  };
-
-  await upsertUser({ email: 'admin@eduvault.test', fullName: 'Kavya Nair', role: 'ADMIN', status: 'ACTIVE' });
-
-  for (const def of INSTITUTIONS) {
-    let inst = await Institution.findOne({ code: def.code });
-    if (!inst) {
-      const { contact: _contact, ...fields } = def;
-      inst = await Institution.create({ ...fields, approvedAt: def.status === 'ACTIVE' ? now : undefined });
-      created++;
-    }
-    if (inst.status === 'ACTIVE' && !activeKey(inst)) {
-      inst.signingKeys.push(generateSigningKey(inst.code));
-    }
-    const contact = await upsertUser({
-      ...def.contact,
-      role: 'ISSUER',
-      status: def.status === 'ACTIVE' ? 'ACTIVE' : 'PENDING_APPROVAL',
-      institution: inst._id,
-    });
-    inst.contact ??= contact._id;
-    await inst.save();
+/** Creates the administrator if it does not exist yet. An existing account (and its password) is never changed. */
+export async function seedAdmin() {
+  if (process.env.NODE_ENV === 'production' && !process.env.ADMIN_PASSWORD) {
+    throw new Error('Set ADMIN_PASSWORD in the environment before creating the administrator in production');
   }
-
-  // A student of the test college who has already activated their EduVault account.
-  const kvce = (await Institution.findOne({ code: 'KVCE-TEST' }))!;
-  const student = await upsertUser({ email: 'student@edubridge.test', fullName: 'Rahul Kumar', role: 'STUDENT', status: 'ACTIVE' });
-  const rec = await StudentRecord.updateOne(
-    { institution: kvce._id, rollNumber: '21KV1A0542' },
+  const res = await User.updateOne(
+    { email: ADMIN_EMAIL },
     {
       $setOnInsert: {
-        fullName: 'Rahul Kumar',
-        programme: 'B.Tech Computer Science and Engineering',
-        admissionYear: 2023,
-        account: student._id,
-        linkedAt: now,
+        email: ADMIN_EMAIL,
+        fullName: 'EduVault Administrator',
+        role: 'ADMIN',
+        status: 'ACTIVE',
+        passwordHash: await hashPassword(ADMIN_PASSWORD),
+        termsAcceptedAt: new Date(),
       },
     },
     { upsert: true },
   );
-  created += rec.upsertedCount;
-  return created;
+  return res.upsertedCount;
 }

@@ -6,7 +6,7 @@ import { AuditLog } from '../src/modules/audit/audit.model';
 import { vaultClient } from '../src/modules/eduvault/vaultClient';
 import { MlError, mlClient } from '../src/modules/assessment/mlClient';
 import { clearRegistryCache } from '../src/modules/verification/registry';
-import { DEMO_PASSWORD, seedDemoUsers } from '../src/scripts/seedData';
+import { DEMO_PASSWORD, seedDemoUsers } from './fixtures';
 import { StudentDocument } from '../src/modules/applications/models';
 
 // Passes the Aadhaar (Verhoeff) checksum; made up for tests, not anyone's real number.

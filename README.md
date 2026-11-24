@@ -40,34 +40,30 @@ npm run dev
 | ML service     | http://127.0.0.1:8000/health         |
 
 No database setup is needed for development. When `MONGODB_URI` in `apps/edubridge-api/.env` is empty, the API starts an
-in-memory MongoDB and seeds demo accounts. The data resets on every restart. The first run downloads a MongoDB binary (~600 MB, one time).
+in-memory MongoDB and creates the administrator. The data resets on every restart. The first run downloads a MongoDB binary (~600 MB, one time).
 
 To use MongoDB Atlas, set `MONGODB_URI` in `apps/edubridge-api/.env` and `apps/eduvault-api/.env` (the same cluster is fine —
-EduVault always uses its own `eduvault` database), then run `npm run seed` once. It seeds both applications.
+EduVault always uses its own `eduvault` database), then run `npm run seed` once. It creates the administrator of each application.
 
 EduBridge and EduVault share a partner secret: `EDUVAULT_CLIENT_SECRET` (EduBridge) must equal `EDUBRIDGE_CLIENT_SECRET` (EduVault).
 
-### Demo accounts (fictional test data)
+### Accounts
 
-Password for all accounts: `Demo@1234`
+Only the two administrators are created automatically. Everyone else signs up on the website.
 
-| Role      | Email                              |
-| --------- | ---------------------------------- |
-| Admin     | admin@edubridge.test               |
-| Student   | student@edubridge.test             |
-| Volunteer | volunteer@edubridge.test           |
-| Sponsor   | sponsor@edubridge.test             |
-| Volunteer (pending approval) | pending.volunteer@edubridge.test |
+| App      | Administrator          | Default password |
+| -------- | ---------------------- | ---------------- |
+| EduBridge | admin@edubridge.test  | `Demo@1234`      |
+| EduVault  | admin@eduvault.test   | `Demo@1234`      |
 
-EduVault (same password `Demo@1234`):
+Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in the app's `.env` **before** the first `npm run seed` to choose different ones
+(required in production). An existing administrator is never changed by the seed.
 
-| Role                                   | Email                    |
-| -------------------------------------- | ------------------------ |
-| EduVault admin                         | admin@eduvault.test      |
-| Institution — Krishna Valley College of Engineering (Test), trusted | registrar@kvce.test |
-| Institution — Riverside Institute of Science (Test), awaiting approval | registrar@riverside.test |
-| Student Rahul Kumar, roll no. 21KV1A0542 | student@edubridge.test |
+- **Students, sponsors and volunteers** register at http://localhost:5173/register. Volunteers stay pending until the admin approves them (*Users*).
+- **Institutions** register on EduVault (http://localhost:5174) and stay pending until the EduVault admin approves them.
+- **Students' EduVault accounts** are activated with the one-time code their institution gives them when enrolling them.
 
+The automated tests create their own fictional accounts (`apps/*/tests/fixtures.ts`); they never touch your database.
 
 ## Scripts
 
@@ -77,7 +73,7 @@ EduVault (same password `Demo@1234`):
 | `npm test`          | API integration tests (Vitest + Supertest) and ML service tests (pytest) |
 | `npm run typecheck` | Type-checks every workspace                   |
 | `npm run build`     | Production builds of API and web              |
-| `npm run seed`      | Seeds demo users into the configured database |
+| `npm run seed`      | Creates the administrators in the configured database |
 
 ## Security implemented (Phase 1)
 

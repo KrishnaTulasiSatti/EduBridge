@@ -2,14 +2,14 @@ import { createApp } from './app';
 import { connectDB, disconnectDB } from './config/db';
 import { env } from './config/env';
 import { scheduleRetention } from './modules/retention/retention.service';
-import { DEMO_PASSWORD, seedDemoUsers } from './scripts/seedData';
+import { ADMIN_EMAIL, seedAdmin } from './scripts/seedData';
 
 async function main() {
   const inMemory = await connectDB();
   if (inMemory) {
-    await seedDemoUsers();
+    await seedAdmin();
     console.log('🧪 Using in-memory MongoDB (data resets on restart). Set MONGODB_URI in .env to use Atlas.');
-    console.log(`   Demo logins: admin|student|volunteer|sponsor @edubridge.test  /  ${DEMO_PASSWORD}`);
+    console.log(`   Administrator: ${ADMIN_EMAIL}. Everyone else registers on the website.`);
   }
 
   scheduleRetention();

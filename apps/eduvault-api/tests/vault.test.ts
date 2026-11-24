@@ -6,7 +6,7 @@ import { createApp } from '../src/app';
 import { connectDB, disconnectDB } from '../src/config/db';
 import { env } from '../src/config/env';
 import { AuditLog } from '../src/modules/audit/audit.model';
-import { DEMO_PASSWORD, seedDemoData } from '../src/scripts/seedData';
+import { DEMO_PASSWORD, seedDemoData } from './fixtures';
 
 const app = createApp();
 const REDIRECT = 'http://localhost:5173/dashboard/eduvault/callback';

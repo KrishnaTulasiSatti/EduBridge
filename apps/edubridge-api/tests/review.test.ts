@@ -7,7 +7,7 @@ import { AuditLog } from '../src/modules/audit/audit.model';
 import { StudentDocument } from '../src/modules/applications/models';
 import { MlError, mlClient } from '../src/modules/assessment/mlClient';
 import { vaultClient } from '../src/modules/eduvault/vaultClient';
-import { DEMO_PASSWORD, seedDemoUsers } from '../src/scripts/seedData';
+import { DEMO_PASSWORD, seedDemoUsers } from './fixtures';
 
 const app = createApp();
 const PDF = Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF');

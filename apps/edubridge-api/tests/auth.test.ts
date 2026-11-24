@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app';
 import { connectDB, disconnectDB } from '../src/config/db';
 import { AuditLog } from '../src/modules/audit/audit.model';
-import { DEMO_PASSWORD, seedDemoUsers } from '../src/scripts/seedData';
+import { DEMO_PASSWORD, seedDemoUsers } from './fixtures';
 
 const app = createApp();
 

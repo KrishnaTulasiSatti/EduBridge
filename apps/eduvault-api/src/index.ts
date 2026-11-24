@@ -1,14 +1,14 @@
 import { createApp } from './app';
 import { connectDB, disconnectDB } from './config/db';
 import { env } from './config/env';
-import { DEMO_PASSWORD, seedDemoData } from './scripts/seedData';
+import { ADMIN_EMAIL, seedAdmin } from './scripts/seedData';
 
 async function main() {
   const inMemory = await connectDB();
   if (inMemory) {
-    await seedDemoData();
+    await seedAdmin();
     console.log('🧪 EduVault is using in-memory MongoDB (data resets on restart). Set MONGODB_URI in .env to keep data.');
-    console.log(`   Demo logins: admin@eduvault.test, registrar@kvce.test, student@edubridge.test  /  ${DEMO_PASSWORD}`);
+    console.log(`   Administrator: ${ADMIN_EMAIL}. Institutions register on the EduVault website.`);
   }
 
   const server = createApp().listen(env.PORT, () => {

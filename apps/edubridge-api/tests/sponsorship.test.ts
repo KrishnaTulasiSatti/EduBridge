@@ -8,7 +8,7 @@ import { AuditLog } from '../src/modules/audit/audit.model';
 import { mlClient } from '../src/modules/assessment/mlClient';
 import { vaultClient } from '../src/modules/eduvault/vaultClient';
 import { Certificate, Sponsorship } from '../src/modules/sponsorship/models';
-import { DEMO_PASSWORD, seedDemoUsers } from '../src/scripts/seedData';
+import { DEMO_PASSWORD, seedDemoUsers } from './fixtures';
 
 const app = createApp();
 const PDF = Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF');

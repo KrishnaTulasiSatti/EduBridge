@@ -1,31 +1,32 @@
-import type { Role } from '@edubridge/shared';
 import { hashPassword } from '../modules/auth/auth.service';
 import { User } from '../modules/auth/user.model';
 
-/** Fictional demo accounts — clearly test data, never real people. */
-export const DEMO_PASSWORD = 'Demo@1234';
+/**
+ * The only account the app creates by itself: the first administrator.
+ * Everyone else (students, volunteers, sponsors) registers through the website.
+ * Set ADMIN_EMAIL / ADMIN_PASSWORD in .env to choose them; the defaults are for local development only.
+ */
+export const ADMIN_EMAIL = process.env.ADMIN_EMAIL?.trim() || 'admin@edubridge.test';
+export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Demo@1234';
 
-export const DEMO_USERS: { fullName: string; email: string; role: Role; status?: 'ACTIVE' | 'PENDING_APPROVAL' }[] = [
-  { fullName: 'Ananya Rao', email: 'admin@edubridge.test', role: 'ADMIN' },
-  { fullName: 'Rahul Kumar', email: 'student@edubridge.test', role: 'STUDENT' },
-  { fullName: 'Meera Iyer', email: 'volunteer@edubridge.test', role: 'VOLUNTEER' },
-  { fullName: 'Priya Sharma', email: 'sponsor@edubridge.test', role: 'SPONSOR' },
-  { fullName: 'Arjun Verma', email: 'pending.volunteer@edubridge.test', role: 'VOLUNTEER', status: 'PENDING_APPROVAL' },
-];
-
-export async function seedDemoUsers() {
-  const passwordHash = await hashPassword(DEMO_PASSWORD);
-  let created = 0;
-  for (const u of DEMO_USERS) {
-    const res = await User.updateOne(
-      { email: u.email },
-      {
-        $set: { fullName: u.fullName, role: u.role },
-        $setOnInsert: { email: u.email, status: u.status ?? 'ACTIVE', passwordHash, consentAcceptedAt: new Date() },
-      },
-      { upsert: true },
-    );
-    created += res.upsertedCount;
+/** Creates the administrator if it does not exist yet. An existing account (and its password) is never changed. */
+export async function seedAdmin() {
+  if (process.env.NODE_ENV === 'production' && !process.env.ADMIN_PASSWORD) {
+    throw new Error('Set ADMIN_PASSWORD in the environment before creating the administrator in production');
   }
-  return created;
+  const res = await User.updateOne(
+    { email: ADMIN_EMAIL },
+    {
+      $setOnInsert: {
+        email: ADMIN_EMAIL,
+        fullName: 'EduBridge Administrator',
+        role: 'ADMIN',
+        status: 'ACTIVE',
+        passwordHash: await hashPassword(ADMIN_PASSWORD),
+        consentAcceptedAt: new Date(),
+      },
+    },
+    { upsert: true },
+  );
+  return res.upsertedCount;
 }
