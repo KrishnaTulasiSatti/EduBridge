@@ -140,6 +140,16 @@ const applicationSchema = new Schema(
       ),
       default: undefined,
     },
+    /** Running totals of pledged and confirmed sponsorships (kept in step with Sponsorship records inside transactions). */
+    funding: {
+      type: new Schema({ pledged: { type: Number, default: 0 }, confirmed: { type: Number, default: 0 } }, { _id: false }),
+      default: undefined,
+    },
+    /** The student's consent to show their anonymised profile to sponsors once approved. */
+    sponsorVisibility: {
+      type: new Schema({ visible: { type: Boolean, required: true }, at: { type: Date, required: true }, noteToSponsors: String }, { _id: false }),
+      default: undefined,
+    },
     /** Preliminary recommendation handed to the administrator. */
     volunteerReview: {
       type: new Schema(
@@ -162,6 +172,7 @@ applicationSchema.index({ student: 1, academicYear: 1 }, { unique: true });
 applicationSchema.index({ status: 1, submittedAt: -1 });
 applicationSchema.index({ 'assignment.volunteer': 1, status: 1 });
 applicationSchema.index({ 'volunteerReview.by': 1 });
+applicationSchema.index({ status: 1, 'sponsorVisibility.visible': 1 });
 
 export const Application = model('Application', applicationSchema);
 export type ApplicationDoc = HydratedDocument<InferSchemaType<typeof applicationSchema>>;
@@ -204,7 +215,10 @@ export type StudentDocumentDoc = HydratedDocument<InferSchemaType<typeof documen
 const counterSchema = new Schema({ _id: String, seq: { type: Number, default: 0 } });
 const Counter = model('Counter', counterSchema);
 
-export async function nextApplicationNumber(year = new Date().getFullYear()) {
-  const c = await Counter.findOneAndUpdate({ _id: `application-${year}` }, { $inc: { seq: 1 } }, { upsert: true, new: true });
-  return `EB-${year}-${String(c.seq).padStart(6, '0')}`;
+/** Next number in a named yearly sequence, e.g. nextSequence('EB', 'application') → EB-2026-000001. */
+export async function nextSequence(prefix: string, name: string, year = new Date().getFullYear()) {
+  const c = await Counter.findOneAndUpdate({ _id: `${name}-${year}` }, { $inc: { seq: 1 } }, { upsert: true, new: true });
+  return `${prefix}-${year}-${String(c.seq).padStart(6, '0')}`;
 }
+
+export const nextApplicationNumber = (year = new Date().getFullYear()) => nextSequence('EB', 'application', year);

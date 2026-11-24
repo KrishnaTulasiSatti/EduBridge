@@ -21,6 +21,12 @@ const envSchema = z.object({
     .regex(/^([0-9a-fA-F]{64})?$/, 'DATA_ENCRYPTION_KEY must be 64 hex characters')
     .optional()
     .default(''),
+  /** 32-byte Ed25519 seed (64 hex characters) that signs sponsorship certificates. */
+  CERTIFICATE_SIGNING_KEY: z
+    .string()
+    .regex(/^([0-9a-fA-F]{64})?$/, 'CERTIFICATE_SIGNING_KEY must be 64 hex characters')
+    .optional()
+    .default(''),
 });
 
 const parsed = envSchema.safeParse({
@@ -37,6 +43,11 @@ if (!parsed.success) {
 
 if (parsed.data.NODE_ENV === 'production' && !parsed.data.DATA_ENCRYPTION_KEY) {
   console.error('❌ DATA_ENCRYPTION_KEY is required in production');
+  process.exit(1);
+}
+
+if (parsed.data.NODE_ENV === 'production' && !parsed.data.CERTIFICATE_SIGNING_KEY) {
+  console.error('❌ CERTIFICATE_SIGNING_KEY is required in production');
   process.exit(1);
 }
 

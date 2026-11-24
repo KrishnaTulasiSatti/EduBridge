@@ -4,7 +4,7 @@ import { Toaster } from 'sonner';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { NAVIGATION } from '@/components/layout/navigation';
 import { FullPageLoader, GuestRoute, ProtectedRoute } from '@/components/layout/ProtectedRoute';
-import { AuthProvider } from '@/context/AuthContext';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import LandingPage from '@/pages/LandingPage';
 
@@ -23,6 +23,13 @@ const VerifyApplicationPage = lazy(() => import('@/pages/verification/VerifyAppl
 const ReviewQueuePage = lazy(() => import('@/pages/review/ReviewQueuePage'));
 const ReviewApplicationPage = lazy(() => import('@/pages/review/ReviewApplicationPage'));
 const ModelPage = lazy(() => import('@/pages/review/ModelPage'));
+const SponsorshipsAdminPage = lazy(() => import('@/pages/admin/SponsorshipsPage'));
+const StudentSponsorshipPage = lazy(() => import('@/pages/student/SponsorshipPage'));
+const PreferencesPage = lazy(() => import('@/pages/sponsor/PreferencesPage'));
+const DiscoverPage = lazy(() => import('@/pages/sponsor/DiscoverPage'));
+const SponsorStudentPage = lazy(() => import('@/pages/sponsor/SponsorStudentPage'));
+const MySponsorshipsPage = lazy(() => import('@/pages/sponsor/MySponsorshipsPage'));
+const CertificatePage = lazy(() => import('@/pages/CertificatePage'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 // Pages that are not built yet render a placeholder.
@@ -56,6 +63,14 @@ function ThemedToaster() {
 
 const student = ['STUDENT'] as const;
 
+/** /dashboard/sponsorships is a different page for each role. */
+function SponsorshipsRoute() {
+  const { user } = useAuth();
+  if (user?.role === 'ADMIN') return <SponsorshipsAdminPage />;
+  if (user?.role === 'SPONSOR') return <MySponsorshipsPage />;
+  return <StudentSponsorshipPage />;
+}
+
 export default function App() {
   return (
     <ThemeProvider>
@@ -66,6 +81,7 @@ export default function App() {
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
               <Route path="/register" element={<GuestRoute><RegisterPage /></GuestRoute>} />
+              <Route path="/certificates/:number" element={<CertificatePage />} />
 
               <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
                 <Route index element={<DashboardHome />} />
@@ -103,6 +119,10 @@ export default function App() {
                 <Route path="review/:id" element={<ProtectedRoute roles={['ADMIN']}><ReviewApplicationPage /></ProtectedRoute>} />
                 <Route path="model" element={<ProtectedRoute roles={['ADMIN']}><ModelPage /></ProtectedRoute>} />
                 <Route path="users" element={<ProtectedRoute roles={['ADMIN']}><UsersPage /></ProtectedRoute>} />
+                <Route path="sponsorships" element={<ProtectedRoute roles={['ADMIN', 'SPONSOR', 'STUDENT']}><SponsorshipsRoute /></ProtectedRoute>} />
+                <Route path="preferences" element={<ProtectedRoute roles={['SPONSOR']}><PreferencesPage /></ProtectedRoute>} />
+                <Route path="discover" element={<ProtectedRoute roles={['SPONSOR']}><DiscoverPage /></ProtectedRoute>} />
+                <Route path="discover/:id" element={<ProtectedRoute roles={['SPONSOR']}><SponsorStudentPage /></ProtectedRoute>} />
                 {placeholderPaths.map((p) => (
                   <Route key={p} path={p} element={<ComingSoon />} />
                 ))}

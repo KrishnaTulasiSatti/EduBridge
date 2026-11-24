@@ -34,7 +34,7 @@ export const NAVIGATION: Record<Role, NavItem[]> = {
     { to: '/dashboard/application', label: 'Application', icon: FileText },
     { to: '/dashboard/documents', label: 'Documents', icon: FolderOpen },
     { to: '/dashboard/profile', label: 'Profile', icon: UserRound },
-    { to: '/dashboard/sponsorships', label: 'Sponsorship', icon: HeartHandshake, phase: 6, description: 'Once you are sponsored, you will see each contribution and how much of your requirement is funded.' },
+    { to: '/dashboard/sponsorships', label: 'Sponsorship', icon: HeartHandshake },
   ],
   VOLUNTEER: [
     { to: '/dashboard', label: 'Overview', icon: Home },
@@ -48,14 +48,14 @@ export const NAVIGATION: Record<Role, NavItem[]> = {
     { to: '/dashboard/verification', label: 'Verification', icon: ShieldCheck },
     { to: '/dashboard/review', label: 'Decisions', icon: Gavel },
     { to: '/dashboard/model', label: 'Need model', icon: Sigma },
-    { to: '/dashboard/sponsorships', label: 'Sponsorships', icon: HandCoins, phase: 6, description: 'Sponsorship commitments and allocations across the platform.' },
+    { to: '/dashboard/sponsorships', label: 'Sponsorships', icon: HandCoins },
     { to: '/dashboard/analytics', label: 'Analytics', icon: BarChart3, phase: 7, description: 'Application, verification and sponsorship trends.' },
     { to: '/dashboard/audit', label: 'Audit log', icon: ScrollText, phase: 7, description: 'A searchable, permanent record of important activity.' },
   ],
   SPONSOR: [
     { to: '/dashboard', label: 'Overview', icon: Home },
-    { to: '/dashboard/discover', label: 'Find students', icon: Search, phase: 6, description: 'Verified, approved students that match your preferences.' },
-    { to: '/dashboard/sponsorships', label: 'My sponsorships', icon: HeartHandshake, phase: 6, description: 'Your contributions, allocations and certificates.' },
-    { to: '/dashboard/preferences', label: 'Preferences', icon: Settings2, phase: 6, description: 'Your budget, preferred level of study and type of support.' },
+    { to: '/dashboard/discover', label: 'Find students', icon: Search },
+    { to: '/dashboard/sponsorships', label: 'My sponsorships', icon: HeartHandshake },
+    { to: '/dashboard/preferences', label: 'Preferences', icon: Settings2 },
   ],
 };

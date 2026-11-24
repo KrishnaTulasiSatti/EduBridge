@@ -3,3 +3,4 @@ export * from './auth';
 export * from './application';
 export * from './verification';
 export * from './assessment';
+export * from './sponsorship';

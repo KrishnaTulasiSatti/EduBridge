@@ -11,6 +11,7 @@ import { eduvaultRouter } from './modules/eduvault/eduvault.routes';
 import { usersRouter } from './modules/users/users.routes';
 import { verificationRouter } from './modules/verification/verification.routes';
 import { reviewRouter } from './modules/assessment/review.routes';
+import { adminSponsorshipsRouter, certificatesRouter, fundingRouter, sponsorRouter } from './modules/sponsorship/sponsorship.routes';
 
 export function createApp() {
   const app = express();
@@ -35,6 +36,10 @@ export function createApp() {
   app.use('/api/eduvault', eduvaultRouter);
   app.use('/api/verification', verificationRouter);
   app.use('/api/review', reviewRouter);
+  app.use('/api/sponsor', sponsorRouter);
+  app.use('/api/funding', fundingRouter);
+  app.use('/api/sponsorships', adminSponsorshipsRouter);
+  app.use('/api/certificates', certificatesRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

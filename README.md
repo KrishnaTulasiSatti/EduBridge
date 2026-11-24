@@ -172,6 +172,40 @@ A separate, clearly labelled simulation of a DigiLocker-style locker. It is not 
 - **Privacy**: the encrypted Aadhaar number is deleted once a final decision is made (the last 4 digits remain).
 - The ML service is called only by the EduBridge API with a shared token (`ML_SERVICE_TOKEN` in both `.env` files).
 
+## Sponsor matching, sponsorships and certificates (Phase 6)
+
+- **Student consent first**: an approved student chooses on the *Sponsorship* page to show an **anonymised profile**
+  (pseudonym such as “Student 7KQ2MD”, course, level, year, state, last exam %, need level, cost breakdown, circumstances and
+  an optional note). Name, contact details, address, college name, income figures, documents and Aadhaar are never sent to sponsors.
+- **Sponsor preferences**: budget, preferred levels, types of support (tuition, hostel, books…), states and circumstances,
+  the name to print on certificates and whether students may see it.
+- **Matching** (rule-based, explainable): `0.30 × level + 0.30 × support category + 0.25 × budget fit + 0.15 × other preferences`.
+  An empty preference means “any”. Category match is the share of the student's costs in the sponsor's preferred categories.
+  Ties are broken by need level, then remaining requirement. Each student card shows why it was suggested.
+- **Pledge → confirm**: a sponsor pledges an amount (minimum ₹500). The pledge reserves it for **14 days**; an administrator
+  confirms it once the funds are received (date + payment reference). Unconfirmed pledges are released automatically.
+  Sponsors can withdraw a pledge until it is confirmed; admins can cancel any sponsorship (a confirmed one only if the money was returned).
+- **Over-allocation is impossible**: each pledge runs in a **MongoDB transaction** whose updates check
+  `pledged + confirmed + amount ≤ approved amount` and `committed + amount ≤ sponsor budget` atomically, so two sponsors pledging at
+  the same moment cannot over-fund a student. One active sponsorship per sponsor per student (partial unique index).
+- The application moves to `PARTIALLY_FUNDED` / `FULLY_FUNDED` from **confirmed** amounts; fully funded students leave discovery.
+- **Certificates**: on confirmation EduBridge issues a sponsor certificate of appreciation and a student award certificate.
+  Each is a canonical JSON record hashed with SHA-256 and **signed with EduBridge's Ed25519 key** (`CERTIFICATE_SIGNING_KEY`).
+  `/certificates/<number>?code=<code>` is a public, printable verification page (the random code printed on the certificate is required);
+  it re-verifies the signature and shows if the certificate was revoked. The public key is at `/api/certificates/public-key`.
+- Every action (preferences, consent, pledge, withdrawal, expiry, confirmation, cancellation, certificate issue/revoke) is audited.
+- No payment gateway yet: funds are transferred outside the platform and recorded by an administrator (as the spec allows).
+
+## Deploying the web app on Vercel
+
+The repository is an npm workspace. `apps/edubridge-web/vercel.json` holds the build settings, so in Vercel only set:
+
+- **Root Directory**: `apps/edubridge-web` (keep “Include files outside the root directory” enabled; the app uses `packages/shared`)
+- **Environment variable** `VITE_API_URL`: the public URL of the deployed EduBridge API, without `/api` (e.g. `https://edubridge-api.onrender.com`)
+
+The API (Express + MongoDB) runs as a normal Node server (e.g. Render or Railway), with `NODE_ENV=production`, `MONGODB_URI`,
+`JWT_ACCESS_SECRET`, `DATA_ENCRYPTION_KEY`, `CERTIFICATE_SIGNING_KEY` and `CLIENT_ORIGIN` set to the Vercel URL.
+
 ## Development phases
 
 1. ✅ Setup, design system, landing page, authentication and roles
@@ -179,6 +213,6 @@ A separate, clearly labelled simulation of a DigiLocker-style locker. It is not 
 3. ✅ EduVault: institutions, marksheet issuing, Ed25519 signatures, consent and sharing
 4. ✅ Income and college ID verification, volunteer workspace
 5. ✅ Admin review, rule-based need assessment, ML service and model evaluation
-6. Sponsor matching, sponsorship management, certificates
+6. ✅ Sponsor matching, sponsorship management, certificates
 7. Analytics dashboard, audit log explorer, security hardening
 8. End-to-end tests, demo data, deployment

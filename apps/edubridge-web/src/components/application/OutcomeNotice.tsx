@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import type { ApplicationDTO } from '@edubridge/shared';
 import { Alert } from '@/components/ui/alert';
 import { formatDate } from '@/lib/student';
@@ -11,8 +12,8 @@ export function OutcomeNotice({ application, className }: { application: Applica
   if (o.decision === 'APPROVED')
     return (
       <Alert tone="success" title="Your application has been approved" className={className}>
-        {o.approvedAmount ? `Approved for sponsorship of up to ${formatINR(o.approvedAmount)}. ` : ''}Your profile can now be matched with sponsors. Decided on{' '}
-        {decided}.{o.message && <span className="mt-2 block whitespace-pre-line">{o.message}</span>}
+        {o.approvedAmount ? `Approved for sponsorship of up to ${formatINR(o.approvedAmount)}. ` : ''}Decided on {decided}. To be matched with sponsors, show your anonymised profile on the{' '}
+        <Link to="/dashboard/sponsorships" className="underline underline-offset-2">Sponsorship</Link> page.{o.message && <span className="mt-2 block whitespace-pre-line">{o.message}</span>}
       </Alert>
     );
   if (o.decision === 'ON_HOLD')
