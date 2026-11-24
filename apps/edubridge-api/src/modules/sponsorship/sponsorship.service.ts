@@ -30,6 +30,7 @@ import { AppError } from '../../utils/AppError';
 import { Application, StudentDocument, nextSequence } from '../applications/models';
 import { AUDIT_ACTIONS, audit } from '../audit/audit.service';
 import { User } from '../auth/user.model';
+import * as notify from '../notifications/notify';
 import { SponsorProfile, Sponsorship, type SponsorshipDoc } from './models';
 
 /**
@@ -406,6 +407,7 @@ export async function connect(user: Actor, applicationId: string, input: Connect
     metadata: { reference, applicationNumber: app.applicationNumber, amount, remainingBefore: remaining },
     req,
   });
+  notify.connected(created);
   const [dto] = await toDTOs([created.toObject()], 'SPONSOR');
   return { sponsorship: dto };
 }
@@ -429,7 +431,7 @@ async function endInternal(id: string, reason: EndReason, actor: Actor, note: st
     await Application.updateOne({ _id: s.application }, { $inc: { 'funding.promised': -s.amount } }, { session });
     await SponsorProfile.updateOne({ user: s.sponsor }, { $inc: { committed: -s.amount } }, { session });
     await syncFundingStatus(s.application, actor.id, session);
-    return { reference: s.reference, amount: s.amount };
+    return { reference: s.reference, amount: s.amount, sponsor: s.sponsor, student: s.student, sponsorName: s.sponsorName, messageToStudent: s.messageToStudent };
   });
   await audit({
     actorId: actor.id,
@@ -440,6 +442,7 @@ async function endInternal(id: string, reason: EndReason, actor: Actor, note: st
     metadata: { reference: snapshot.reference, amount: snapshot.amount, reason, note },
     req,
   });
+  notify.connectionEnded(snapshot, reason === 'BY_SPONSOR' ? 'SPONSOR' : 'ADMIN');
 }
 
 export async function endBySponsor(user: Actor, id: string, req: Request) {

@@ -1,3 +1,4 @@
+import * as notify from '../notifications/notify';
 import { Router } from 'express';
 import { z } from 'zod';
 import { ACCOUNT_STATUSES, ROLES } from '@edubridge/shared';
@@ -91,5 +92,6 @@ usersRouter.patch('/:id/status', validateBody(statusBody), async (req, res) => {
     metadata: { from: previous, to: user.status, reason: req.body.reason },
     req,
   });
+  notify.accountStatusChanged(user, previous, user.status, req.body.reason);
   res.json({ user: toPublicUser(user) });
 });

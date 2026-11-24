@@ -1,3 +1,4 @@
+import * as notify from '../notifications/notify';
 import type { Request } from 'express';
 import { Types, type PipelineStage } from 'mongoose';
 import { z } from 'zod';
@@ -240,6 +241,7 @@ export async function decide(user: Actor, id: string, input: DecisionInput, req:
     },
     req,
   });
+  notify.decisionMade(app._id, input.decision, input.approvedAmount, input.messageToStudent || undefined);
   return detail(user, id);
 }
 

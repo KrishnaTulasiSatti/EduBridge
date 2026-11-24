@@ -6,6 +6,7 @@ import { env } from '../../config/env';
 import { AppError } from '../../utils/AppError';
 import { generateRefreshToken, hashToken, signAccessToken } from '../../utils/tokens';
 import { AUDIT_ACTIONS, audit } from '../audit/audit.service';
+import * as notify from '../notifications/notify';
 import { RefreshToken } from './refreshToken.model';
 import { readPanToken } from './sponsorPan.service';
 import { User, type UserDoc } from './user.model';
@@ -79,6 +80,8 @@ export async function register(input: ParsedRegister, req: Request) {
     metadata: { role: user.role, maskedPan: user.panVerification?.maskedPan },
     req,
   });
+  notify.welcome(user);
+  if (user.status === 'PENDING_APPROVAL') notify.volunteerWaiting(user);
 
   if (user.status !== 'ACTIVE') return { user, tokens: null };
   return { user, tokens: await issueTokens(user, req) };

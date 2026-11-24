@@ -2,6 +2,7 @@ import { createApp } from './app';
 import { connectDB, disconnectDB } from './config/db';
 import { env } from './config/env';
 import { scheduleRetention } from './modules/retention/retention.service';
+import { flushMail } from './modules/notifications/mailer';
 import { migrateToConnections } from './modules/sponsorship/migrate';
 import { ADMIN_EMAIL, seedAdmin } from './scripts/seedData';
 
@@ -22,6 +23,7 @@ async function main() {
 
   const shutdown = async () => {
     server.close();
+    await flushMail();
     await disconnectDB();
     process.exit(0);
   };

@@ -47,6 +47,16 @@ services:
         fromService: { type: web, name: edubridge-ml, envVarKey: ML_SERVICE_TOKEN }
       - key: UPLOAD_DIR
         value: ./uploads
+      - key: SMTP_HOST # smtp.gmail.com
+        sync: false
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_USER # the Gmail address
+        sync: false
+      - key: SMTP_PASS # a Gmail app password
+        sync: false
+      - key: MAIL_FROM # e.g. EduBridge <yourname@gmail.com>
+        sync: false
     # Uploaded documents are lost on every restart on the free plan. For lasting storage switch to a paid
     # plan, uncomment this disk and set UPLOAD_DIR to /var/data/uploads.
     # disk:

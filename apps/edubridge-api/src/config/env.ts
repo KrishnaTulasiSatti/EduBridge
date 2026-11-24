@@ -27,6 +27,15 @@ const envSchema = z.object({
     .default(''),
   /** Files of applications that were not approved are deleted this many days after the decision. */
   DOCUMENT_RETENTION_DAYS: z.coerce.number().int().min(1).default(180),
+  /** Email notifications (SMTP). Leave SMTP_HOST empty in development to print emails in the console instead. */
+  SMTP_HOST: z.string().optional().default(''),
+  SMTP_PORT: z.coerce.number().default(587),
+  SMTP_USER: z.string().optional().default(''),
+  SMTP_PASS: z.string().optional().default(''),
+  /** Sender shown in the inbox, e.g. "EduBridge <yourname@gmail.com>". Defaults to SMTP_USER. */
+  MAIL_FROM: z.string().optional().default(''),
+  /** The website address used in email links. Defaults to the first CLIENT_ORIGIN. */
+  APP_URL: z.string().optional().default(''),
 });
 
 const parsed = envSchema.safeParse({
@@ -51,5 +60,11 @@ if (parsed.data.NODE_ENV === 'production' && !parsed.data.MONGODB_URI) {
   process.exit(1);
 }
 
+if (parsed.data.NODE_ENV === 'production' && !parsed.data.SMTP_HOST) {
+  console.warn('⚠️  SMTP_HOST is not set: email notifications will not be sent');
+}
+
 export const env = parsed.data;
 export const isProd = env.NODE_ENV === 'production';
+/** Website address used in email links. */
+export const appUrl = (env.APP_URL || env.CLIENT_ORIGIN.split(',')[0]).trim().replace(/\/+$/, '');

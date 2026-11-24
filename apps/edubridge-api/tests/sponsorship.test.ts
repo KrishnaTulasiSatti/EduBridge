@@ -8,6 +8,7 @@ import { AuditLog } from '../src/modules/audit/audit.model';
 import { mlClient } from '../src/modules/assessment/mlClient';
 import { issuePanTokenForTests } from '../src/modules/auth/sponsorPan.service';
 import { vaultClient } from '../src/modules/eduvault/vaultClient';
+import { flushMail, testOutbox } from '../src/modules/notifications/mailer';
 import { migrateToConnections } from '../src/modules/sponsorship/migrate';
 import { SponsorProfile, Sponsorship } from '../src/modules/sponsorship/models';
 import { DEMO_PASSWORD, seedDemoUsers } from './fixtures';
@@ -221,6 +222,25 @@ describe('connecting sponsors with students', () => {
     expect(ended.sponsor.contact).toBeUndefined();
     expect(ended.endNote).toBeUndefined();
     expect((await request(app).get('/api/sponsor/preferences').set('Authorization', sponsor)).body.profile.committed).toBe(0);
+  });
+
+  it('emails the student, sponsors and volunteers at each step', async () => {
+    await flushMail();
+    const subjects = (email: string) => testOutbox.filter((m) => m.to === email).map((m) => m.subject);
+    const student = subjects('student@edubridge.test');
+    for (const rx of [/^We received your application EB-/, /^Verification has started/, /has been approved$/, /^Priya Sharma wants to support your education$/, /connection with Priya Sharma has ended$/]) {
+      expect(student.some((t) => rx.test(t))).toBe(true);
+    }
+    expect(subjects('sponsor@edubridge.test')).toEqual(expect.arrayContaining(['You are connected with Rahul Kumar']));
+    expect(subjects('sponsor@edubridge.test').some((t) => /has ended$/.test(t))).toBe(true);
+    expect(subjects('volunteer@edubridge.test')).toContain('New applications are waiting for verification');
+
+    const approved = testOutbox.find((m) => m.to === 'student@edubridge.test' && /approved$/.test(m.subject))!;
+    expect(approved.text).toContain('₹60,000');
+    // The last "connected" email is the one with the sponsor's message (an earlier test connected without one).
+    const connectedMail = testOutbox.filter((m) => m.subject === 'Priya Sharma wants to support your education').at(-1)!;
+    expect(connectedMail.text).toContain('sponsor@edubridge.test');
+    expect(connectedMail.text).toContain('Keep going!');
   });
 
   it('asks students who agreed before contact sharing to agree again', async () => {

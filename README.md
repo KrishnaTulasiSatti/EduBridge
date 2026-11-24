@@ -222,6 +222,25 @@ to give, and the sponsor and student then contact each other to arrange the supp
   (default 180). The record, SHA-256 fingerprint and verification results are kept; opening the file returns *410 Gone*. The job runs
   at start-up and daily and is audited. (Aadhaar numbers are already deleted at any final decision.)
 
+## Email notifications
+
+The EduBridge API emails people when something happens that they should know about. Emails are sent in the background:
+a mail problem is logged and never breaks the action that triggered it.
+
+| Who | When |
+| --- | --- |
+| Everyone | Welcome email after creating an account (wording depends on the role) |
+| Administrators | A new volunteer is waiting for approval |
+| Volunteers | Their account is approved, suspended or reactivated; the verification queue goes from empty to waiting (one email, not one per application) |
+| Students | Application received; verification started; the decision (approved with the amount, on hold, or not approved, with the admin's message) |
+| Students and sponsors | A sponsor connects (each gets the other's name, email and phone); a connection is ended |
+
+**Setup with Gmail.** Turn on 2-Step Verification for the Gmail account, then create an app password at
+Google Account → Security → App passwords. In `apps/edubridge-api/.env` set `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=587`,
+`SMTP_USER` (the Gmail address), `SMTP_PASS` (the 16-character app password) and optionally
+`MAIL_FROM=EduBridge <the Gmail address>`. Gmail allows about 500 emails a day. The same settings work for the PAN Registry's codes.
+Without `SMTP_HOST`, emails are printed in the API console, which is handy while developing.
+
 ## Sponsor PAN verification
 
 Sponsors cannot create an account until their PAN is verified. The check runs against **PAN Registry**

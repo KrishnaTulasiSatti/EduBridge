@@ -1,3 +1,4 @@
+import * as notify from '../notifications/notify';
 import type { Request } from 'express';
 import { Types, type PipelineStage } from 'mongoose';
 import { z } from 'zod';
@@ -239,6 +240,7 @@ export async function submit(userId: string, req: Request) {
   await app.save();
 
   await audit({ actorId: userId, actorRole: 'STUDENT', action: AUDIT_ACTIONS.APPLICATION_SUBMITTED, resourceType: 'Application', resourceId: app.id, metadata: { applicationNumber: app.applicationNumber, requestedAmount: app.support?.requestedAmount }, req });
+  notify.applicationSubmitted(app._id);
   return toApplicationDTO(app);
 }
 

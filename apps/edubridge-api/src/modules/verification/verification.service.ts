@@ -1,3 +1,4 @@
+import * as notify from '../notifications/notify';
 import type { Request } from 'express';
 import { Types, type PipelineStage } from 'mongoose';
 import { z } from 'zod';
@@ -198,6 +199,7 @@ export async function claim(user: Actor, id: string, req: Request) {
   }
   await StudentDocument.updateMany({ application: id, status: 'PENDING' }, { $set: { status: 'PROCESSING' } });
   await audit({ actorId: user.id, actorRole: user.role, action: AUDIT_ACTIONS.VERIFICATION_CLAIMED, resourceType: 'Application', resourceId: id, metadata: { applicationNumber: before.applicationNumber }, req });
+  if (before.status === 'SUBMITTED') notify.verificationStarted(before._id);
   // Check the college ID against the college's EduVault records straight away.
   await runEnrolmentCheck(user, (await Application.findById(id))!, false, req);
   return detail(user, id);
