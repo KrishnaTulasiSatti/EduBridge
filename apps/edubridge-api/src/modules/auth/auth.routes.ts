@@ -18,8 +18,12 @@ const cookieOptions: CookieOptions = {
   path: '/api/auth',
 };
 
+/**
+ * A session cookie (no maxAge/expires): the browser deletes it when it is closed, which signs the user out.
+ * The refresh token itself still expires on the server after REFRESH_TOKEN_TTL_DAYS as a backstop.
+ */
 function setRefreshCookie(res: Response, token: string) {
-  res.cookie(REFRESH_COOKIE, token, { ...cookieOptions, maxAge: env.REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000 });
+  res.cookie(REFRESH_COOKIE, token, cookieOptions);
 }
 function clearRefreshCookie(res: Response) {
   res.clearCookie(REFRESH_COOKIE, cookieOptions);

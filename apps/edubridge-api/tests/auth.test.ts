@@ -39,6 +39,14 @@ describe('auth', () => {
     expect(getCookie(res)).toBeDefined();
   });
 
+  it('sets the refresh cookie as a browser-session cookie, so closing the browser signs out', async () => {
+    const res = await request(app).post('/api/auth/login').send({ email: student.email, password: student.password });
+    expect(res.status).toBe(200);
+    const raw = (res.headers['set-cookie'] as unknown as string[]).find((c) => c.startsWith('eb_refresh='))!;
+    expect(raw).toMatch(/HttpOnly/i);
+    expect(raw).not.toMatch(/Max-Age|Expires/i);
+  });
+
   it('rejects duplicate email and weak passwords', async () => {
     const dup = await request(app).post('/api/auth/register').send(student);
     expect(dup.status).toBe(409);

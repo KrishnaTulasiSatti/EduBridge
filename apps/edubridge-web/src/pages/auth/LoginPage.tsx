@@ -9,10 +9,11 @@ import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/input';
 import { useAuth } from '@/context/AuthContext';
 import { getErrorMessage } from '@/lib/api';
+import { IDLE_MINUTES } from '@/lib/session';
 import { AuthLayout } from './AuthLayout';
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, idleSignedOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from;
@@ -41,6 +42,9 @@ export default function LoginPage() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-5" noValidate>
         {formError && <Alert tone="danger">{formError}</Alert>}
+        {!formError && idleSignedOut && (
+          <Alert tone="info">You were signed out because there was no activity for {IDLE_MINUTES} minutes. Please sign in again.</Alert>
+        )}
         <Field label="Email" htmlFor="email" error={errors.email?.message}>
           <Input id="email" type="email" autoComplete="email" autoFocus invalid={!!errors.email} {...register('email')} />
         </Field>
