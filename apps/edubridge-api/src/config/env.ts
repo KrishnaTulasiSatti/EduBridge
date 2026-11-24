@@ -21,6 +21,8 @@ const envSchema = z.object({
     .regex(/^([0-9a-fA-F]{64})?$/, 'DATA_ENCRYPTION_KEY must be 64 hex characters')
     .optional()
     .default(''),
+  /** Files of applications that were not approved are deleted this many days after the decision. */
+  DOCUMENT_RETENTION_DAYS: z.coerce.number().int().min(1).default(180),
   /** 32-byte Ed25519 seed (64 hex characters) that signs sponsorship certificates. */
   CERTIFICATE_SIGNING_KEY: z
     .string()

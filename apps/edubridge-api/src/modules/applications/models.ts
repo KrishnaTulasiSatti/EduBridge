@@ -202,6 +202,8 @@ const documentSchema = new Schema(
     enrolmentCheck: { type: Schema.Types.Mixed },
     /** Signature check result for documents imported from EduVault (DocumentVerificationDTO). */
     verification: { type: Schema.Types.Mixed },
+    /** Set when the stored file was deleted under the retention policy (record, hash and checks are kept). */
+    purgedAt: Date,
   },
   { timestamps: true },
 );

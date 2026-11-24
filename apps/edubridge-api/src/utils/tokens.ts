@@ -11,6 +11,7 @@ export interface AccessTokenPayload {
 export function signAccessToken(payload: AccessTokenPayload) {
   return jwt.sign(payload, env.JWT_ACCESS_SECRET, {
     expiresIn: env.ACCESS_TOKEN_TTL as SignOptions['expiresIn'],
+    algorithm: 'HS256',
     issuer: 'edubridge',
     audience: 'edubridge-web',
   });
@@ -20,6 +21,7 @@ export function verifyAccessToken(token: string): AccessTokenPayload {
   return jwt.verify(token, env.JWT_ACCESS_SECRET, {
     issuer: 'edubridge',
     audience: 'edubridge-web',
+    algorithms: ['HS256'],
   }) as AccessTokenPayload;
 }
 

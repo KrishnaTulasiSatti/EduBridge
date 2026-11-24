@@ -78,27 +78,5 @@ export async function updateUserStatus(id: string, status: AccountStatus) {
   return data.user;
 }
 
-export const ACTION_LABELS: Record<string, string> = {
-  USER_REGISTERED: 'created an account',
-  LOGIN_SUCCESS: 'signed in',
-  LOGIN_FAILED: 'had a failed sign-in attempt',
-  ACCOUNT_LOCKED: 'was locked after repeated failed sign-ins',
-  LOGOUT: 'signed out',
-  REFRESH_TOKEN_REUSE: 'triggered a session security alert',
-  USER_STATUS_CHANGED: 'changed an account status',
-  APPLICATION_CREATED: 'started an application',
-  APPLICATION_SUBMITTED: 'submitted an application',
-  DOCUMENT_UPLOADED: 'uploaded a document',
-  DOCUMENT_DELETED: 'removed a document',
-  DOCUMENT_VIEWED: 'viewed a student document',
-  EDUVAULT_IMPORTED: 'imported a marksheet from EduVault',
-  VERIFICATION_CLAIMED: 'started verifying an application',
-  VERIFICATION_RELEASED: 'returned an application to the queue',
-  DOCUMENT_REVIEWED: 'recorded a document check',
-  ENROLMENT_CHECKED: 'checked a college enrolment on EduVault',
-  AADHAAR_VIEWED: 'viewed a student’s Aadhaar number',
-  ASSESSMENT_RUN: 'ran a need assessment',
-  APPLICATION_DECIDED: 'recorded an eligibility decision',
-  MODEL_TRAINED: 'trained the need model',
-  VOLUNTEER_REVIEW_SUBMITTED: 'submitted a volunteer review',
-};
+/** Activity sentence fragments for every audited action, e.g. "submitted an application". */
+export { auditPhrase as actionPhrase } from '@edubridge/shared';

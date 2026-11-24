@@ -35,6 +35,8 @@ export const AUDIT_ACTIONS = {
   SPONSORSHIP_EXPIRED: 'SPONSORSHIP_EXPIRED',
   CERTIFICATE_ISSUED: 'CERTIFICATE_ISSUED',
   CERTIFICATE_REVOKED: 'CERTIFICATE_REVOKED',
+  AUDIT_EXPORTED: 'AUDIT_EXPORTED',
+  DOCUMENTS_PURGED: 'DOCUMENTS_PURGED',
 } as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
 
@@ -48,6 +50,17 @@ interface AuditEntry {
   req?: Request;
 }
 
+// Defence in depth: secrets must never reach the audit log, even if a caller passes them by mistake.
+const SECRET_KEY = /password|passcode|token|secret|privatekey|aadhaar(?!last4)|^otp$|^code$/i;
+
+export function redact(value: unknown, depth = 0): unknown {
+  if (depth > 5 || value === null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value.map((v) => redact(v, depth + 1));
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, SECRET_KEY.test(k) ? '[redacted]' : redact(v, depth + 1)]),
+  );
+}
+
 /** Records an audit entry. Never throws — auditing must not break the main request. */
 export async function audit(entry: AuditEntry) {
   try {
@@ -57,7 +70,7 @@ export async function audit(entry: AuditEntry) {
       action: entry.action,
       resourceType: entry.resourceType,
       resourceId: entry.resourceId,
-      metadata: entry.metadata ?? {},
+      metadata: redact(entry.metadata ?? {}),
       ip: entry.req?.ip,
       userAgent: entry.req?.get('user-agent'),
     });

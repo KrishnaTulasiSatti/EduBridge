@@ -1,10 +1,12 @@
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
-import helmet from 'helmet';
 import morgan from 'morgan';
 import { env } from './config/env';
 import { errorHandler, notFoundHandler } from './middleware/error';
+import { apiLimiter, noStore, rejectOperatorInjection, requireHttps, securityHeaders } from './middleware/security';
+import { analyticsRouter } from './modules/analytics/analytics.routes';
+import { auditRouter } from './modules/audit/audit.routes';
 import { applicationsRouter, documentsRouter, profileRouter } from './modules/applications/applications.routes';
 import { authRouter } from './modules/auth/auth.routes';
 import { eduvaultRouter } from './modules/eduvault/eduvault.routes';
@@ -18,15 +20,20 @@ export function createApp() {
 
   app.set('trust proxy', 1);
   app.disable('x-powered-by');
-  app.use(helmet());
-  app.use(cors({ origin: env.CLIENT_ORIGIN.split(','), credentials: true }));
-  app.use(express.json({ limit: '1mb' }));
-  app.use(cookieParser());
+  app.use(securityHeaders);
+  app.use(cors({ origin: env.CLIENT_ORIGIN.split(',').map((o) => o.trim()), credentials: true }));
   if (env.NODE_ENV === 'development') app.use(morgan('dev'));
 
+  // Health checks come from the host's internal network, before the HTTPS check.
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', service: 'edubridge-api', time: new Date().toISOString() });
   });
+
+  app.use(requireHttps);
+  app.use('/api', apiLimiter, noStore);
+  app.use(express.json({ limit: '1mb' }));
+  app.use(cookieParser());
+  app.use(rejectOperatorInjection);
 
   app.use('/api/auth', authRouter);
   app.use('/api/users', usersRouter);
@@ -40,6 +47,8 @@ export function createApp() {
   app.use('/api/funding', fundingRouter);
   app.use('/api/sponsorships', adminSponsorshipsRouter);
   app.use('/api/certificates', certificatesRouter);
+  app.use('/api/analytics', analyticsRouter);
+  app.use('/api/audit', auditRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

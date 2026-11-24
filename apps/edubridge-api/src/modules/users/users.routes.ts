@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { ACCOUNT_STATUSES, ROLES } from '@edubridge/shared';
-import { authenticate, requireRole } from '../../middleware/auth';
+import { authenticate, forgetAccount, requireRole } from '../../middleware/auth';
 import { validateBody } from '../../middleware/validate';
 import { AppError } from '../../utils/AppError';
 import { applicationCounts } from '../applications/applications.service';
@@ -75,6 +75,7 @@ usersRouter.patch('/:id/status', validateBody(statusBody), async (req, res) => {
   const previous = user.status;
   user.status = req.body.status;
   await user.save();
+  forgetAccount(user.id);
 
   // Suspending a user ends all of their sessions immediately.
   if (user.status === 'SUSPENDED') {

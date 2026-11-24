@@ -196,6 +196,30 @@ A separate, clearly labelled simulation of a DigiLocker-style locker. It is not 
 - Every action (preferences, consent, pledge, withdrawal, expiry, confirmation, cancellation, certificate issue/revoke) is audited.
 - No payment gateway yet: funds are transferred outside the platform and recorded by an administrator (as the spec allows).
 
+## Analytics, audit log explorer and security hardening (Phase 7)
+
+- **Analytics** (`/dashboard/analytics`, admins): registered students, applications submitted, awaiting verification,
+  documents awaiting review, approved / not approved / on hold, approved by need level, students eligible for sponsorship,
+  confirmed, pledged and still-needed amounts, sponsor budgets, a 12-month trend (submissions, decisions, confirmed money),
+  volunteer verification activity (last 30 days) and security events. Every figure is counted live from the database (`GET /api/analytics`).
+- **Audit log explorer** (`/dashboard/audit`, admins): filter by category, activity, role, person (name or email), record
+  (application number, sponsorship reference, certificate number or ID) and date range; open an entry to see every recorded
+  detail, IP address, browser and other activity on the same record. Filters live in the URL, so other pages link to it.
+  **CSV export** (up to 10,000 rows) neutralises spreadsheet formulas and is itself audited. Entries remain immutable.
+- **Security hardening**
+  - Suspending an account or changing its role ends access **immediately** (each request re-checks the account; 10-second cache), not when the 15-minute token expires
+  - JWTs are signed and verified with **HS256 only** (no `alg: none` or algorithm confusion)
+  - A global **MongoDB operator-injection guard** rejects `$`-keys, dotted keys and prototype keys in bodies and query strings
+  - General **API rate limit** (900 requests / 15 min per IP) on top of the stricter sign-in limit
+  - Strict headers for a JSON API: `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`, no referrer,
+    HSTS in production, `Cache-Control: no-store` on every API response
+  - **HTTPS required** in production (`/api/health` excepted for the host's health check)
+  - Invalid query parameters return 400 instead of a server error; production errors never reveal internals
+  - **Audit metadata redaction**: keys such as passwords, tokens, secrets and Aadhaar numbers are replaced with `[redacted]` before saving
+- **Document retention**: files of applications that were **not approved** are deleted `DOCUMENT_RETENTION_DAYS` after the decision
+  (default 180). The record, SHA-256 fingerprint and verification results are kept; opening the file returns *410 Gone*. The job runs
+  at start-up and daily and is audited. (Aadhaar numbers are already deleted at any final decision.)
+
 ## Deploying the web app on Vercel
 
 The repository is an npm workspace. `apps/edubridge-web/vercel.json` holds the build settings, so in Vercel only set:
@@ -214,5 +238,5 @@ The API (Express + MongoDB) runs as a normal Node server (e.g. Render or Railway
 4. ✅ Income and college ID verification, volunteer workspace
 5. ✅ Admin review, rule-based need assessment, ML service and model evaluation
 6. ✅ Sponsor matching, sponsorship management, certificates
-7. Analytics dashboard, audit log explorer, security hardening
+7. ✅ Analytics dashboard, audit log explorer, security hardening
 8. End-to-end tests, demo data, deployment

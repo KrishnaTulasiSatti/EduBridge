@@ -29,6 +29,8 @@ const PreferencesPage = lazy(() => import('@/pages/sponsor/PreferencesPage'));
 const DiscoverPage = lazy(() => import('@/pages/sponsor/DiscoverPage'));
 const SponsorStudentPage = lazy(() => import('@/pages/sponsor/SponsorStudentPage'));
 const MySponsorshipsPage = lazy(() => import('@/pages/sponsor/MySponsorshipsPage'));
+const AnalyticsPage = lazy(() => import('@/pages/admin/AnalyticsPage'));
+const AuditLogPage = lazy(() => import('@/pages/admin/AuditLogPage'));
 const CertificatePage = lazy(() => import('@/pages/CertificatePage'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
@@ -118,6 +120,8 @@ export default function App() {
                 <Route path="review" element={<ProtectedRoute roles={['ADMIN']}><ReviewQueuePage /></ProtectedRoute>} />
                 <Route path="review/:id" element={<ProtectedRoute roles={['ADMIN']}><ReviewApplicationPage /></ProtectedRoute>} />
                 <Route path="model" element={<ProtectedRoute roles={['ADMIN']}><ModelPage /></ProtectedRoute>} />
+                <Route path="analytics" element={<ProtectedRoute roles={['ADMIN']}><AnalyticsPage /></ProtectedRoute>} />
+                <Route path="audit" element={<ProtectedRoute roles={['ADMIN']}><AuditLogPage /></ProtectedRoute>} />
                 <Route path="users" element={<ProtectedRoute roles={['ADMIN']}><UsersPage /></ProtectedRoute>} />
                 <Route path="sponsorships" element={<ProtectedRoute roles={['ADMIN', 'SPONSOR', 'STUDENT']}><SponsorshipsRoute /></ProtectedRoute>} />
                 <Route path="preferences" element={<ProtectedRoute roles={['SPONSOR']}><PreferencesPage /></ProtectedRoute>} />

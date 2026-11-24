@@ -117,3 +117,125 @@ export function ConfusionMatrix({ labels, matrix }: { labels: NeedLevel[]; matri
     </div>
   );
 }
+
+/**
+ * Vertical columns for one series over time (e.g. applications per month). Bars grow from a
+ * zero baseline with rounded tops; each column has a hover/focus tooltip and an accessible table.
+ */
+export function ColumnChart({
+  data,
+  label,
+  format = (v) => String(v),
+  height = 160,
+}: {
+  data: { key: string; label: string; fullLabel: string; value: number }[];
+  /** What one value means, used in tooltips and the hidden table header. */
+  label: string;
+  format?: (v: number) => string;
+  height?: number;
+}) {
+  const max = Math.max(...data.map((d) => d.value), 0);
+  // A round upper bound so the single gridline reads as a clean number.
+  const top = max <= 0 ? 1 : niceCeil(max);
+  return (
+    <figure>
+      <div className="relative" style={{ height }}>
+        <div className="pointer-events-none absolute inset-x-0 top-0 border-t border-dashed border-border" aria-hidden />
+        <span className="pointer-events-none absolute -top-2.5 right-0 bg-surface pl-1 text-[11px] tabular-nums text-subtle" aria-hidden>
+          {format(top)}
+        </span>
+        <div className="absolute inset-0 flex items-end gap-[2px] border-b border-border-strong" aria-hidden>
+          {data.map((d) => (
+            <Tip
+              key={d.key}
+              content={
+                <>
+                  <span className="text-muted-foreground">{d.fullLabel}</span>
+                  <br />
+                  <span className="font-medium tabular-nums">{format(d.value)}</span> {label}
+                </>
+              }
+              className="flex h-full flex-1 items-end rounded-t-[4px] outline-none hover:bg-sunken/60 focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <div
+                className="mx-auto w-full max-w-9 rounded-t-[4px] bg-chart"
+                style={{ height: d.value > 0 ? `max(2px, ${(d.value / top) * 100}%)` : 0 }}
+              />
+            </Tip>
+          ))}
+        </div>
+      </div>
+      <div className="mt-1.5 flex gap-[2px]" aria-hidden>
+        {data.map((d) => (
+          <span key={d.key} className="flex-1 text-center text-[11px] text-subtle">
+            {d.label}
+          </span>
+        ))}
+      </div>
+      <table className="sr-only">
+        <caption>{label} by month</caption>
+        <tbody>
+          {data.map((d) => (
+            <tr key={d.key}>
+              <th scope="row">{d.fullLabel}</th>
+              <td>{format(d.value)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </figure>
+  );
+}
+
+function niceCeil(v: number) {
+  const p = 10 ** Math.floor(Math.log10(v));
+  for (const m of [1, 2, 2.5, 5, 10]) if (v <= m * p) return m * p;
+  return 10 * p;
+}
+
+/**
+ * One horizontal bar split into parts of a whole (e.g. confirmed / pledged / still needed).
+ * Single hue in steps of strength, separated by a 2px surface gap, with a legend that also prints the values.
+ */
+export function SegmentBar({ parts, format }: { parts: { label: string; value: number; strength: number; help?: string }[]; format: (v: number) => string }) {
+  const total = parts.reduce((s, p) => s + p.value, 0);
+  const fill = (strength: number) => (strength === 0 ? 'var(--chart-track)' : `color-mix(in srgb, var(--chart) ${strength}%, var(--surface))`);
+  return (
+    <div>
+      <div className="flex h-3 w-full gap-[2px] overflow-hidden rounded-[4px] bg-chart-track">
+        {total > 0 &&
+          parts
+            .filter((p) => p.value > 0)
+            .map((p) => (
+              <Tip
+                key={p.label}
+                content={<>{p.label}: <span className="font-medium tabular-nums">{format(p.value)}</span> ({Math.round((p.value / total) * 100)}%)</>}
+                className="h-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <div className="h-full" style={{ width: '100%', background: fill(p.strength) }} />
+              </Tip>
+            ))
+            .map((el, i, arr) => {
+              const p = parts.filter((x) => x.value > 0)[i];
+              return (
+                <div key={p.label} style={{ width: `${(p.value / total) * 100}%` }} className={cn('h-full', arr.length === 1 && 'w-full')}>
+                  {el}
+                </div>
+              );
+            })}
+      </div>
+      <ul className="mt-3 grid gap-2 sm:grid-cols-3">
+        {parts.map((p) => (
+          <li key={p.label} className="flex items-start gap-2 text-sm">
+            <span className="mt-1 size-2.5 shrink-0 rounded-[3px] ring-1 ring-inset ring-border" style={{ background: fill(p.strength) }} aria-hidden />
+            <span className="min-w-0">
+              <span className="block text-muted-foreground">{p.label}</span>
+              <span className="block font-medium tabular-nums">{format(p.value)}</span>
+              {p.help && <span className="block text-[12px] text-subtle">{p.help}</span>}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}

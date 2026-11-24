@@ -49,8 +49,8 @@ export const NAVIGATION: Record<Role, NavItem[]> = {
     { to: '/dashboard/review', label: 'Decisions', icon: Gavel },
     { to: '/dashboard/model', label: 'Need model', icon: Sigma },
     { to: '/dashboard/sponsorships', label: 'Sponsorships', icon: HandCoins },
-    { to: '/dashboard/analytics', label: 'Analytics', icon: BarChart3, phase: 7, description: 'Application, verification and sponsorship trends.' },
-    { to: '/dashboard/audit', label: 'Audit log', icon: ScrollText, phase: 7, description: 'A searchable, permanent record of important activity.' },
+    { to: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
+    { to: '/dashboard/audit', label: 'Audit log', icon: ScrollText },
   ],
   SPONSOR: [
     { to: '/dashboard', label: 'Overview', icon: Home },

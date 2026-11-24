@@ -328,6 +328,7 @@ export async function openDocument(user: { id: string; role: string }, docId: st
     isReviewer = String(app?.assignment?.volunteer) === user.id || String(app?.volunteerReview?.by) === user.id;
   }
   if (!isOwner && !isReviewer) throw AppError.forbidden();
+  if (doc.purgedAt) throw new AppError(410, 'DOCUMENT_DELETED', 'This file was deleted under the document retention policy. Its details and fingerprint are kept.');
   if (isReviewer && !isOwner) {
     await audit({ actorId: user.id, actorRole: user.role, action: AUDIT_ACTIONS.DOCUMENT_VIEWED, resourceType: 'StudentDocument', resourceId: doc.id, metadata: { type: doc.type }, req });
   }

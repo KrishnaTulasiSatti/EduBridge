@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardBody, CardHeader } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import { getErrorMessage } from '@/lib/api';
-import { ACTION_LABELS, updateUserStatus, useAdminStats, useUsers } from '@/lib/useAdminData';
+import { actionPhrase, updateUserStatus, useAdminStats, useUsers } from '@/lib/useAdminData';
 import { greeting, timeAgo } from '@/lib/utils';
 
 export default function AdminHome() {
@@ -102,7 +102,7 @@ export default function AdminHome() {
       </div>
 
       <Card className="mt-6">
-        <CardHeader title="Recent activity" description="The latest entries from the audit log." />
+        <CardHeader title="Recent activity" description="The latest entries from the audit log." action={<Link to="/dashboard/audit" className="text-sm text-primary-ink hover:underline">Open audit log</Link>} />
         <CardBody className="py-2">
           {!data ? (
             <Skeleton className="my-3 h-40" />
@@ -112,7 +112,7 @@ export default function AdminHome() {
                 <li key={a.id} className="flex items-center justify-between gap-4 py-3 text-sm">
                   <p className="min-w-0">
                     <span className="font-medium">{a.actor?.name ?? 'Unknown user'}</span>{' '}
-                    <span className="text-muted-foreground">{ACTION_LABELS[a.action] ?? a.action.toLowerCase().replaceAll('_', ' ')}</span>
+                    <span className="text-muted-foreground">{actionPhrase(a.action)}</span>
                     {a.actor?.role && <span className="text-subtle"> · {ROLE_LABELS[a.actor.role as Role]}</span>}
                   </p>
                   <span className="shrink-0 text-[13px] text-subtle">{timeAgo(a.createdAt)}</span>
