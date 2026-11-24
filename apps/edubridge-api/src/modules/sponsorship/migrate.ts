@@ -16,7 +16,10 @@ export async function migrateToConnections() {
     (await sponsorships.countDocuments({ status: { $in: ['PLEDGED', 'SENT', 'CONFIRMED', 'CANCELLED'] } })) +
     (await Application.collection.countDocuments({ $or: [{ 'funding.pledged': { $exists: true } }, { 'funding.confirmed': { $exists: true } }] }));
   const db = mongoose.connection.db!;
-  const oldCollections = (await db.listCollections({ name: { $in: ['bankaccounts', 'certificates'] } }, { nameOnly: true }).toArray()).map((c) => c.name);
+  // Filter in code: Atlas shared tiers reject operators such as $in in a listCollections filter.
+  const oldCollections = (await db.listCollections({}, { nameOnly: true }).toArray())
+    .map((c) => c.name)
+    .filter((n) => n === 'bankaccounts' || n === 'certificates');
   if (!legacy && !oldCollections.length) return;
 
   const unsetPayment = { payment: '', confirmation: '', expiresAt: '', showNameToStudent: '' };
