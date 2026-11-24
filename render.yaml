@@ -1,0 +1,118 @@
+# Render Blueprint: Dashboard → New → Blueprint → pick this repository.
+# The EduBridge website itself is deployed on Vercel (apps/edubridge-web/vercel.json).
+# Values marked `sync: false` are asked for when the Blueprint is created (see README → "Deploying on Render").
+
+services:
+  # ------------------------------------------------------------------ EduBridge API
+  - type: web
+    name: edubridge-api
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm ci --workspace=@edubridge/api --include=dev && npm run build -w @edubridge/api
+    startCommand: npm run start -w @edubridge/api
+    healthCheckPath: /api/health
+    buildFilter:
+      paths: [apps/edubridge-api/**, packages/**, package.json, package-lock.json]
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: NODE_ENV
+        value: production
+      - key: MONGOMS_DISABLE_POSTINSTALL # skip downloading the test-only MongoDB binary
+        value: 1
+      - key: MONGODB_URI # Atlas string ending in /edubridge
+        sync: false
+      - key: CLIENT_ORIGIN # the Vercel URL, e.g. https://edubridge.vercel.app
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: DATA_ENCRYPTION_KEY # 64 hex characters
+        sync: false
+      - key: CERTIFICATE_SIGNING_KEY # 64 hex characters
+        sync: false
+      - key: EDUVAULT_API_URL # e.g. https://eduvault-api.onrender.com
+        sync: false
+      - key: EDUVAULT_CLIENT_ID
+        value: edubridge
+      - key: EDUVAULT_CLIENT_SECRET
+        fromService: { type: web, name: eduvault-api, envVarKey: EDUBRIDGE_CLIENT_SECRET }
+      - key: ML_SERVICE_URL # e.g. https://edubridge-ml.onrender.com
+        sync: false
+      - key: ML_SERVICE_TOKEN
+        fromService: { type: web, name: edubridge-ml, envVarKey: ML_SERVICE_TOKEN }
+      - key: UPLOAD_DIR
+        value: ./uploads
+    # Uploaded documents are lost on every restart on the free plan. For lasting storage switch to a paid
+    # plan, uncomment this disk and set UPLOAD_DIR to /var/data/uploads.
+    # disk:
+    #   name: uploads
+    #   mountPath: /var/data
+    #   sizeGB: 1
+
+  # -------------------------------------------------------------------- EduVault API
+  - type: web
+    name: eduvault-api
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm ci --workspace=@eduvault/api --include=dev && npm run build -w @eduvault/api
+    startCommand: npm run start -w @eduvault/api
+    buildFilter:
+      paths: [apps/eduvault-api/**, packages/eduvault-shared/**, package.json, package-lock.json]
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: NODE_ENV
+        value: production
+      - key: MONGOMS_DISABLE_POSTINSTALL
+        value: 1
+      - key: MONGODB_URI # the same Atlas cluster
+        sync: false
+      - key: MONGODB_DB
+        value: eduvault
+      - key: CLIENT_ORIGIN # the EduVault website URL, e.g. https://eduvault-web.onrender.com
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: KEY_ENCRYPTION_KEY # 64 hex characters
+        sync: false
+      - key: EDUBRIDGE_CLIENT_ID
+        value: edubridge
+      - key: EDUBRIDGE_CLIENT_SECRET
+        generateValue: true
+      - key: EDUBRIDGE_REDIRECT_URIS # <Vercel URL>/dashboard/eduvault/callback
+        sync: false
+
+  # ---------------------------------------------------------------- EduVault website
+  - type: web
+    name: eduvault-web
+    runtime: static
+    buildCommand: npm ci --workspace=@eduvault/web --include=dev && npm run build -w @eduvault/web
+    staticPublishPath: apps/eduvault-web/dist
+    buildFilter:
+      paths: [apps/eduvault-web/**, packages/eduvault-shared/**, package.json, package-lock.json]
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: VITE_API_URL # e.g. https://eduvault-api.onrender.com
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  # -------------------------------------------------------------- ML need service
+  - type: web
+    name: edubridge-ml
+    runtime: python
+    plan: free
+    region: singapore
+    rootDir: apps/ml-service
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: ML_SERVICE_TOKEN
+        generateValue: true
