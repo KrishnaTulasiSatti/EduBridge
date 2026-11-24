@@ -45,7 +45,7 @@ No database setup is needed for development. When `MONGODB_URI` in `apps/edubrid
 in-memory MongoDB and creates the administrator. The data resets on every restart. The first run downloads a MongoDB binary (~600 MB, one time).
 
 To use MongoDB Atlas, set `MONGODB_URI` in `apps/edubridge-api/.env` and `apps/eduvault-api/.env` (the same cluster is fine —
-EduVault always uses its own `eduvault` database), then run `npm run seed` once. It creates the administrator of each application.
+EduVault always uses its own `eduvault` database), then run `npm run seed` once. It creates the administrator of each application and adds the PAN Registry's test records.
 
 EduBridge and EduVault share a partner secret: `EDUVAULT_CLIENT_SECRET` (EduBridge) must equal `EDUBRIDGE_CLIENT_SECRET` (EduVault).
 
@@ -64,7 +64,7 @@ Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in the app's `.env` **before** the first 
 - **Students, sponsors and volunteers** register at http://localhost:5173/register. Volunteers stay pending until the admin approves them (*Users*).
 - **Sponsors** verify their PAN while signing up, so their PAN must first be added on the PAN Registry records page (see *Sponsor PAN verification* below).
 - **Institutions** register on EduVault (http://localhost:5174) and stay pending until the EduVault admin approves them.
-- **Students' EduVault accounts** are activated with the one-time code their institution gives them when enrolling them.
+- **Students' EduVault accounts** are activated with a one-time code. EduVault emails it to the student when their institution enrols them.
 
 The automated tests create their own fictional accounts (`apps/*/tests/fixtures.ts`); they never touch your database.
 
@@ -76,7 +76,7 @@ The automated tests create their own fictional accounts (`apps/*/tests/fixtures.
 | `npm test`          | API integration tests (Vitest + Supertest) and ML service tests (pytest) |
 | `npm run typecheck` | Type-checks every workspace                   |
 | `npm run build`     | Production builds of API and web              |
-| `npm run seed`      | Creates the administrators in the configured database |
+| `npm run seed`      | Creates the administrators and the PAN Registry's test records in the configured databases |
 
 ## Security implemented (Phase 1)
 
@@ -110,7 +110,8 @@ A separate, clearly labelled simulation of a DigiLocker-style locker. It is not 
 
 - **Institutions** register and stay pending until an EduVault admin approves them; approval creates an **Ed25519 signing key**.
   The private key is encrypted at rest (AES-256-GCM, `KEY_ENCRYPTION_KEY`); public keys are published at `/api/registry/issuers`.
-- Institutions **enrol students**; each enrolment gets a **one-time activation code** that the student uses to open their account.
+- Institutions **enrol students** with their email. EduVault **emails a one-time activation code** to the student, who uses it to open their account.
+  The code is also shown once to the institution, in case the email does not arrive. **New code** sends a fresh one (to a corrected email if needed) and the old one stops working.
 - Institutions **upload the marksheet PDF** (checked by content, max 5 MB, stored privately) and enter only its key details:
   student, semester, academic year, exam session, result and an optional overall percentage. Marks are not typed in.
 - **Issuing** freezes those details together with the **PDF's SHA-256** into a canonical JSON record, hashes the record with
@@ -238,7 +239,7 @@ a mail problem is logged and never breaks the action that triggered it.
 **Setup with Gmail.** Turn on 2-Step Verification for the Gmail account, then create an app password at
 Google Account → Security → App passwords. In `apps/edubridge-api/.env` set `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=587`,
 `SMTP_USER` (the Gmail address), `SMTP_PASS` (the 16-character app password) and optionally
-`MAIL_FROM=EduBridge <the Gmail address>`. Gmail allows about 500 emails a day. The same settings work for the PAN Registry's codes.
+`MAIL_FROM=EduBridge <the Gmail address>`. Gmail allows about 500 emails a day. The same settings work for the PAN Registry's codes and for EduVault's activation codes (put them in `apps/eduvault-api/.env`).
 Without `SMTP_HOST`, emails are printed in the API console, which is handy while developing.
 
 ## Sponsor PAN verification
@@ -266,6 +267,9 @@ and for the code: `VERIFIED`, `INVALID_OTP`, `EXPIRED`, `TOO_MANY_ATTEMPTS`, `AL
 secret in `PAN_REGISTRY_CLIENT_SECRET` in `apps/edubridge-api/.env`. Without SMTP settings (development), codes are printed in the
 registry's console. To send real emails with Gmail set `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=587`, `SMTP_USER` and a Gmail
 **app password** in `SMTP_PASS`. Set `MONGODB_URI` to keep records between restarts (the registry uses its own `panregistry` database).
+
+**Test records.** `npm run seed` (or `npm run seed -w @panregistry/api`) adds five made-up PAN holders, all with the same OTP
+email. It skips PANs that already exist. See `apps/pan-registry-api/src/scripts/seed.ts` for the PAN, name and date of birth to enter.
 
 **Going live.** Replace the registry with a licensed PAN verification provider. Only `panClient.ts` in the EduBridge API needs to change.
 

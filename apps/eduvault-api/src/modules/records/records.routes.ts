@@ -1,7 +1,7 @@
 import { Router, type RequestHandler, type Response } from 'express';
 import multer from 'multer';
 import { z } from 'zod';
-import { activationCodeSchema, marksheetSchema, MAX_MARKSHEET_BYTES, studentRecordSchema } from '@eduvault/shared';
+import { activationCodeRequestSchema, activationCodeSchema, marksheetSchema, MAX_MARKSHEET_BYTES, studentRecordSchema } from '@eduvault/shared';
 import { authenticate, requireRole } from '../../middleware/auth';
 import { validateBody } from '../../middleware/validate';
 import { AppError } from '../../utils/AppError';
@@ -49,8 +49,8 @@ issuerRouter.post('/students', validateBody(studentRecordSchema), async (req, re
   res.status(201).json(await svc.enrolStudent(req.user!.id, req.body, req));
 });
 
-issuerRouter.post('/students/:id/activation-code', async (req, res) => {
-  res.json(await svc.regenerateActivationCode(req.user!.id, String(req.params.id), req));
+issuerRouter.post('/students/:id/activation-code', validateBody(activationCodeRequestSchema), async (req, res) => {
+  res.json(await svc.regenerateActivationCode(req.user!.id, String(req.params.id), req.body.email, req));
 });
 
 issuerRouter.get('/marksheets', async (req, res) => {

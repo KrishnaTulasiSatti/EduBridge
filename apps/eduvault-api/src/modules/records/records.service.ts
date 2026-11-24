@@ -3,6 +3,7 @@ import { Types } from 'mongoose';
 import { z } from 'zod';
 import {
   canonicalJson,
+  type ActivationCodeResult,
   type MarksheetDTO,
   type MarksheetFields,
   type MarksheetPayload,
@@ -14,6 +15,7 @@ import {
 import { AppError } from '../../utils/AppError';
 import { hashToken, humanCode } from '../../utils/tokens';
 import { AUDIT_ACTIONS, audit } from '../audit/audit.service';
+import { activationCodeMail, sendMail } from '../mail/mailer';
 import { User } from '../auth/user.model';
 import { Institution, activeKey, type InstitutionDoc } from '../institutions/institution.model';
 import { sha256Hex, signDigest } from '../institutions/keys';
@@ -49,6 +51,7 @@ export function toRecordDTO(r: StudentRecordDoc, marksheets = 0): StudentRecordD
     rollNumber: r.rollNumber,
     programme: r.programme,
     admissionYear: r.admissionYear,
+    email: r.email ?? undefined,
     linked: !!r.account,
     linkedAt: r.linkedAt?.toISOString(),
     marksheets,
@@ -125,12 +128,18 @@ export async function listStudents(userId: string, query: unknown) {
   return { items: items.map((r) => toRecordDTO(r, byId.get(r.id) ?? 0)), total, page: q.page, limit: q.limit };
 }
 
-async function newActivationCode(record: StudentRecordDoc) {
+/** Creates a fresh one-time code (the old one stops working) and emails it to the student. */
+async function newActivationCode(record: StudentRecordDoc, inst: InstitutionDoc): Promise<ActivationCodeResult> {
   const code = humanCode(10);
   record.set('activationCodeHash', hashToken(code));
   record.activationCodeIssuedAt = new Date();
   await record.save();
-  return formatCode(code);
+  const activationCode = formatCode(code);
+  const email = record.email!;
+  const emailed = await sendMail(
+    activationCodeMail({ to: email, studentName: record.fullName, institutionName: inst.name, rollNumber: record.rollNumber, code: activationCode }),
+  );
+  return { activationCode, email, emailed };
 }
 
 export async function enrolStudent(userId: string, input: StudentRecordInput, req: Request) {
@@ -139,20 +148,38 @@ export async function enrolStudent(userId: string, input: StudentRecordInput, re
     throw AppError.badRequest('A student with this roll number is already enrolled', { rollNumber: ['Already enrolled'] });
   }
   const record = new StudentRecord({ ...input, institution: inst._id, createdBy: userId });
-  const activationCode = await newActivationCode(record);
-  await audit({ actorId: userId, actorRole: 'ISSUER', action: AUDIT_ACTIONS.STUDENT_ENROLLED, resourceType: 'StudentRecord', resourceId: record.id, metadata: { rollNumber: record.rollNumber }, req });
-  return { student: toRecordDTO(record), activationCode };
+  const result = await newActivationCode(record, inst);
+  await audit({
+    actorId: userId,
+    actorRole: 'ISSUER',
+    action: AUDIT_ACTIONS.STUDENT_ENROLLED,
+    resourceType: 'StudentRecord',
+    resourceId: record.id,
+    metadata: { rollNumber: record.rollNumber, codeEmailed: result.emailed },
+    req,
+  });
+  return { student: toRecordDTO(record), ...result };
 }
 
 /** Issues a fresh one-time activation code (the old one stops working). Only for unlinked records. */
-export async function regenerateActivationCode(userId: string, recordId: string, req: Request) {
+export async function regenerateActivationCode(userId: string, recordId: string, email: string, req: Request): Promise<ActivationCodeResult> {
   const inst = await issuerInstitution(userId, { write: true });
   const record = await StudentRecord.findOne({ _id: oid(recordId), institution: inst._id });
   if (!record) throw AppError.notFound('Student not found');
   if (record.account) throw AppError.conflict('This student has already activated their EduVault account');
-  const activationCode = await newActivationCode(record);
-  await audit({ actorId: userId, actorRole: 'ISSUER', action: AUDIT_ACTIONS.ACTIVATION_CODE_ISSUED, resourceType: 'StudentRecord', resourceId: record.id, req });
-  return { activationCode };
+  const emailChanged = record.email !== email;
+  record.email = email;
+  const result = await newActivationCode(record, inst);
+  await audit({
+    actorId: userId,
+    actorRole: 'ISSUER',
+    action: AUDIT_ACTIONS.ACTIVATION_CODE_ISSUED,
+    resourceType: 'StudentRecord',
+    resourceId: record.id,
+    metadata: { emailChanged, codeEmailed: result.emailed },
+    req,
+  });
+  return result;
 }
 
 /* -------------------------------------------------------- Marksheets */

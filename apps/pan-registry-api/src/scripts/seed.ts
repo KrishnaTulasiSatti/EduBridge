@@ -1,4 +1,5 @@
 import { connectDB, disconnectDB } from '../config/db';
+import { env } from '../config/env';
 import { PanRecord } from '../modules/records/record.model';
 
 /** Test PAN holders. All OTPs go to one inbox so sponsor sign-up can be tried end to end. */
@@ -13,6 +14,10 @@ const RECORDS = [
 ];
 
 async function main() {
+  if (!env.MONGODB_URI) {
+    console.log('MONGODB_URI is empty, so there is no database to keep PAN Registry test records in. Set it in apps/pan-registry-api/.env first.');
+    return;
+  }
   await connectDB();
   for (const r of RECORDS) {
     if (await PanRecord.exists({ pan: r.pan })) {

@@ -11,6 +11,8 @@ const studentRecordSchema = new Schema(
     rollNumber: { type: String, required: true, uppercase: true, trim: true },
     programme: { type: String, required: true, trim: true },
     admissionYear: { type: Number, required: true },
+    /** Where the activation code is emailed. Older records may not have one. */
+    email: { type: String, lowercase: true, trim: true },
     /** The EduVault student account this record is linked to, once activated. */
     account: { type: Schema.Types.ObjectId, ref: 'User', index: true },
     linkedAt: Date,

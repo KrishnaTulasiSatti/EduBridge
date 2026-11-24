@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
+  ActivationCodeResult,
   ConsentRequestDTO,
   InstitutionDTO,
   InstitutionStatus,
@@ -83,8 +84,8 @@ export const vaultApi = {
   issuerOverview: async () => (await api.get<IssuerOverview>('/issuer/overview')).data,
   students: async (p: { search?: string; page?: number; limit?: number }) => (await api.get<Page<StudentRecordDTO>>(`/issuer/students${qs(p)}`)).data,
   enrol: async (body: StudentRecordInput) =>
-    (await api.post<{ student: StudentRecordDTO; activationCode: string }>('/issuer/students', body)).data,
-  newCode: async (id: string) => (await api.post<{ activationCode: string }>(`/issuer/students/${id}/activation-code`)).data.activationCode,
+    (await api.post<ActivationCodeResult & { student: StudentRecordDTO }>('/issuer/students', body)).data,
+  newCode: async (id: string, email: string) => (await api.post<ActivationCodeResult>(`/issuer/students/${id}/activation-code`, { email })).data,
   marksheets: async (p: { search?: string; status?: string; page?: number }) =>
     (await api.get<Page<MarksheetDTO>>(`/issuer/marksheets${qs(p)}`)).data,
   marksheet: async (id: string) => (await api.get<{ marksheet: MarksheetDTO }>(`/issuer/marksheets/${id}`)).data.marksheet,

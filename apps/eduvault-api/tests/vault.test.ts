@@ -6,6 +6,7 @@ import { createApp } from '../src/app';
 import { connectDB, disconnectDB } from '../src/config/db';
 import { env } from '../src/config/env';
 import { AuditLog } from '../src/modules/audit/audit.model';
+import { testOutbox } from '../src/modules/mail/mailer';
 import { DEMO_PASSWORD, seedDemoData } from './fixtures';
 
 const app = createApp();
@@ -99,18 +100,63 @@ describe('enrolment and activation codes', () => {
     const res = await request(app)
       .post('/api/issuer/students')
       .set('Authorization', issuer)
-      .send({ fullName: 'Divya Sri', rollNumber: '21kv1a0577', programme: 'B.Tech ECE', admissionYear: 2023 });
+      .send({ fullName: 'Divya Sri', rollNumber: '21kv1a0577', programme: 'B.Tech ECE', admissionYear: 2023, email: 'Divya@Student.test' });
     expect(res.status).toBe(201);
     expect(res.body.student.rollNumber).toBe('21KV1A0577');
+    expect(res.body.student.email).toBe('divya@student.test');
     expect(res.body.activationCode).toMatch(/^[A-Z0-9]{5}-[A-Z0-9]{5}$/);
+    expect(res.body).toMatchObject({ email: 'divya@student.test', emailed: true });
     code = res.body.activationCode;
+
+    const mail = testOutbox.at(-1)!;
+    expect(mail.to).toBe('divya@student.test');
+    expect(mail.subject).toContain('Krishna Valley College of Engineering (Test)');
+    expect(mail.text).toContain(code);
+    expect(mail.html).toContain(code);
+  });
+
+  it('needs the student’s email to enrol', async () => {
+    const res = await request(app)
+      .post('/api/issuer/students')
+      .set('Authorization', issuer)
+      .send({ fullName: 'No Email', rollNumber: '21KV1A0590', programme: 'B.Tech ECE', admissionYear: 2023 });
+    expect(res.status).toBe(400);
+    expect(res.body.error.details.email).toBeTruthy();
+  });
+
+  it('emails a new code (to a corrected address) and the old code stops working', async () => {
+    const enrol = await request(app)
+      .post('/api/issuer/students')
+      .set('Authorization', issuer)
+      .send({ fullName: 'Manoj Varma', rollNumber: '21KV1A0591', programme: 'B.Tech Civil', admissionYear: 2023, email: 'manoj.old@student.test' });
+    const oldCode = enrol.body.activationCode;
+
+    const renew = await request(app)
+      .post(`/api/issuer/students/${enrol.body.student.id}/activation-code`)
+      .set('Authorization', issuer)
+      .send({ email: 'manoj@student.test' });
+    expect(renew.status).toBe(200);
+    expect(renew.body).toMatchObject({ email: 'manoj@student.test', emailed: true });
+    expect(renew.body.activationCode).not.toBe(oldCode);
+    expect(testOutbox.at(-1)!.to).toBe('manoj@student.test');
+    expect(testOutbox.at(-1)!.text).toContain(renew.body.activationCode);
+
+    const old = await request(app)
+      .post('/api/auth/register/student')
+      .send({ fullName: 'Manoj Varma', email: 'manoj@student.test', password: 'Strong@123', activationCode: oldCode, acceptTerms: true });
+    expect(old.status).toBe(400);
+  });
+
+  it('will not send a new code to a student who already activated', async () => {
+    const res = await request(app).post(`/api/issuer/students/${seededRecordId}/activation-code`).set('Authorization', issuer).send({ email: 'rahul@student.test' });
+    expect(res.status).toBe(409);
   });
 
   it('rejects a duplicate roll number', async () => {
     const res = await request(app)
       .post('/api/issuer/students')
       .set('Authorization', issuer)
-      .send({ fullName: 'Someone Else', rollNumber: '21KV1A0577', programme: 'B.Tech ECE', admissionYear: 2023 });
+      .send({ fullName: 'Someone Else', rollNumber: '21KV1A0577', programme: 'B.Tech ECE', admissionYear: 2023, email: 'someone@student.test' });
     expect(res.status).toBe(400);
   });
 

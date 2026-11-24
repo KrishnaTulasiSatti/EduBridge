@@ -12,10 +12,25 @@ export const studentRecordSchema = z.object({
     .regex(/^[A-Z0-9/-]{3,30}$/, 'Use 3–30 letters, numbers, / or -'),
   programme: z.string().trim().min(2, 'Enter the programme, e.g. B.Tech Computer Science').max(120),
   admissionYear: z.number({ error: 'Enter the year of admission' }).int().min(2000).max(2100),
+  /** The activation code is emailed here. */
+  email: z.string().trim().toLowerCase().email('Enter the student’s email address').max(120),
 });
 export type StudentRecordInput = z.infer<typeof studentRecordSchema>;
 
-export interface StudentRecordDTO extends StudentRecordInput {
+/** A new code for an unlinked record. The email may be added or corrected at the same time. */
+export const activationCodeRequestSchema = z.object({ email: studentRecordSchema.shape.email });
+export type ActivationCodeRequest = z.infer<typeof activationCodeRequestSchema>;
+
+/** Returned whenever a code is created. The code is shown once, in case the email does not arrive. */
+export interface ActivationCodeResult {
+  activationCode: string;
+  email: string;
+  emailed: boolean;
+}
+
+export interface StudentRecordDTO extends Omit<StudentRecordInput, 'email'> {
+  /** Missing on records enrolled before emails were added. */
+  email?: string;
   id: string;
   linked: boolean;
   linkedAt?: string;

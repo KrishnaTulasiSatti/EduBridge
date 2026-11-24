@@ -1,9 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ChevronLeft, ChevronRight, Copy, Search, Users } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
-import { studentRecordSchema, type StudentRecordDTO, type StudentRecordInput } from '@eduvault/shared';
+import { activationCodeRequestSchema, studentRecordSchema, type ActivationCodeResult, type StudentRecordDTO, type StudentRecordInput } from '@eduvault/shared';
 import { EmptyState, PageHeader, Skeleton } from '@/components/dashboard/widgets';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +16,9 @@ import { getErrorMessage, getFieldErrors } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 import { useLoad, vaultApi } from '@/lib/vault';
 
-function EnrolForm({ onEnrolled, onCancel }: { onEnrolled: (s: StudentRecordDTO, code: string) => void; onCancel: () => void }) {
+type CodeShown = ActivationCodeResult & { name: string };
+
+function EnrolForm({ onEnrolled, onCancel }: { onEnrolled: (s: StudentRecordDTO, result: ActivationCodeResult) => void; onCancel: () => void }) {
   const {
     register,
     handleSubmit,
@@ -28,8 +30,8 @@ function EnrolForm({ onEnrolled, onCancel }: { onEnrolled: (s: StudentRecordDTO,
   const onSubmit = async (v: StudentRecordInput) => {
     setFormError(null);
     try {
-      const res = await vaultApi.enrol(v);
-      onEnrolled(res.student, res.activationCode);
+      const { student, ...result } = await vaultApi.enrol(v);
+      onEnrolled(student, result);
     } catch (e) {
       const f = getFieldErrors(e);
       if (f) Object.entries(f).forEach(([k, m]) => setError(k as keyof StudentRecordInput, { message: m[0] }));
@@ -56,6 +58,9 @@ function EnrolForm({ onEnrolled, onCancel }: { onEnrolled: (s: StudentRecordDTO,
             <Field label="Year of admission" htmlFor="admissionYear" error={errors.admissionYear?.message}>
               <Input id="admissionYear" type="number" inputMode="numeric" invalid={!!errors.admissionYear} {...register('admissionYear', { valueAsNumber: true })} />
             </Field>
+            <Field label="Student’s email" htmlFor="email" error={errors.email?.message} hint="The activation code is sent here.">
+              <Input id="email" type="email" autoComplete="off" invalid={!!errors.email} {...register('email')} />
+            </Field>
           </div>
           <div className="flex gap-2">
             <Button type="submit" loading={isSubmitting}>
@@ -71,6 +76,58 @@ function EnrolForm({ onEnrolled, onCancel }: { onEnrolled: (s: StudentRecordDTO,
   );
 }
 
+/** Asks for (or confirms) the student's email, then creates a new code and emails it. */
+function NewCodeDialog({ student, onClose, onDone }: { student: StudentRecordDTO | null; onClose: () => void; onDone: (r: ActivationCodeResult) => void }) {
+  const [email, setEmail] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    setEmail(student?.email ?? '');
+    setError(null);
+  }, [student]);
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!student) return;
+    const parsed = activationCodeRequestSchema.safeParse({ email });
+    if (!parsed.success) return setError(parsed.error.issues[0].message);
+    setBusy(true);
+    setError(null);
+    try {
+      onDone(await vaultApi.newCode(student.id, parsed.data.email));
+    } catch (err) {
+      setError(getFieldErrors(err)?.email?.[0] ?? getErrorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog
+      open={!!student}
+      onClose={onClose}
+      title="New activation code"
+      description={student ? `A new code will be emailed to ${student.fullName}. Their old code stops working.` : undefined}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" form="new-code" loading={busy}>
+            Send new code
+          </Button>
+        </>
+      }
+    >
+      <form id="new-code" onSubmit={submit} noValidate>
+        <Field label="Student’s email" htmlFor="new-code-email" error={error ?? undefined}>
+          <Input id="new-code-email" type="email" autoComplete="off" value={email} onChange={(e) => setEmail(e.target.value)} invalid={!!error} />
+        </Field>
+      </form>
+    </Dialog>
+  );
+}
+
 export default function StudentsPage() {
   const { user } = useAuth();
   const canWrite = user?.institution?.status === 'ACTIVE';
@@ -78,8 +135,8 @@ export default function StudentsPage() {
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
   const [adding, setAdding] = useState(false);
-  const [code, setCode] = useState<{ name: string; code: string } | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
+  const [code, setCode] = useState<CodeShown | null>(null);
+  const [renewing, setRenewing] = useState<StudentRecordDTO | null>(null);
   const { data, error, reload } = useLoad(() => vaultApi.students({ search: query, page }), [query, page]);
 
   useEffect(() => {
@@ -90,21 +147,10 @@ export default function StudentsPage() {
     return () => window.clearTimeout(t);
   }, [search]);
 
-  const newCode = async (s: StudentRecordDTO) => {
-    setBusy(s.id);
-    try {
-      setCode({ name: s.fullName, code: await vaultApi.newCode(s.id) });
-    } catch (e) {
-      toast.error(getErrorMessage(e));
-    } finally {
-      setBusy(null);
-    }
-  };
-
   const copy = async () => {
     if (!code) return;
     try {
-      await navigator.clipboard.writeText(code.code);
+      await navigator.clipboard.writeText(code.activationCode);
       toast.success('Code copied');
     } catch {
       toast.error('Could not copy. Please select the code and copy it manually.');
@@ -129,9 +175,9 @@ export default function StudentsPage() {
       {adding && (
         <EnrolForm
           onCancel={() => setAdding(false)}
-          onEnrolled={(s, c) => {
+          onEnrolled={(s, result) => {
             setAdding(false);
-            setCode({ name: s.fullName, code: c });
+            setCode({ name: s.fullName, ...result });
             void reload();
           }}
         />
@@ -172,6 +218,7 @@ export default function StudentsPage() {
                     <td className="px-5 py-3">
                       <p className="font-medium">{s.fullName}</p>
                       <p className="font-mono text-[12.5px] text-muted-foreground">{s.rollNumber}</p>
+                      {s.email && <p className="text-[12.5px] text-subtle">{s.email}</p>}
                     </td>
                     <td className="px-5 py-3 text-muted-foreground">
                       {s.programme}
@@ -187,7 +234,7 @@ export default function StudentsPage() {
                     <td className="px-5 py-3 text-right tabular-nums">{s.marksheets}</td>
                     <td className="px-5 py-3 text-right">
                       {!s.linked && canWrite && (
-                        <Button size="sm" variant="ghost" loading={busy === s.id} onClick={() => newCode(s)}>
+                        <Button size="sm" variant="ghost" onClick={() => setRenewing(s)}>
                           New code
                         </Button>
                       )}
@@ -219,7 +266,13 @@ export default function StudentsPage() {
         open={!!code}
         onClose={() => setCode(null)}
         title="Activation code"
-        description={code ? `Give this code to ${code.name}. They use it once to activate their EduVault account. It is shown only now; you can create a new one later if it is lost.` : undefined}
+        description={
+          code
+            ? code.emailed
+              ? `We emailed this code to ${code.name} at ${code.email}. They use it once to activate their EduVault account. It is shown only now, in case the email does not arrive.`
+              : `The email to ${code.email} could not be sent, so please give this code to ${code.name} yourself. They use it once to activate their EduVault account. It is shown only now.`
+            : undefined
+        }
         footer={
           <>
             <Button variant="secondary" onClick={copy}>
@@ -229,8 +282,18 @@ export default function StudentsPage() {
           </>
         }
       >
-        <p className="rounded-lg bg-sunken py-4 text-center font-mono text-[26px] font-semibold tracking-[0.2em] ring-1 ring-border">{code?.code}</p>
+        <p className="rounded-lg bg-sunken py-4 text-center font-mono text-[26px] font-semibold tracking-[0.2em] ring-1 ring-border">{code?.activationCode}</p>
       </Dialog>
+
+      <NewCodeDialog
+        student={renewing}
+        onClose={() => setRenewing(null)}
+        onDone={(result) => {
+          setCode({ name: renewing!.fullName, ...result });
+          setRenewing(null);
+          void reload();
+        }}
+      />
     </>
   );
 }

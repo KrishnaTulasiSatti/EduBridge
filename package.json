@@ -16,7 +16,7 @@
     "build": "npm run build -w @edubridge/api && npm run build -w @edubridge/web && npm run build -w @eduvault/api && npm run build -w @eduvault/web && npm run build -w @panregistry/api",
     "test": "npm run test -w @edubridge/api && npm run test -w @eduvault/api && npm run test -w @panregistry/api && npm run test -w @edubridge/ml-service",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "seed": "npm run seed -w @edubridge/api && npm run seed -w @eduvault/api"
+    "seed": "npm run seed -w @edubridge/api && npm run seed -w @eduvault/api && npm run seed -w @panregistry/api"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",

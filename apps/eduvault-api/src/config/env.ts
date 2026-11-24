@@ -24,6 +24,13 @@ const envSchema = z.object({
   UPLOAD_DIR: z.string().default('./uploads'),
 
   EDUBRIDGE_REDIRECT_URIS: z.string().default('http://localhost:5173/dashboard/eduvault/callback'),
+
+  /** Email (SMTP) for sending activation codes to students. Leave SMTP_HOST empty in development to print emails in the console. */
+  SMTP_HOST: z.string().optional().default(''),
+  SMTP_PORT: z.coerce.number().default(587),
+  SMTP_USER: z.string().optional().default(''),
+  SMTP_PASS: z.string().optional().default(''),
+  MAIL_FROM: z.string().optional().default(''),
 });
 
 const testDefaults = isTest
