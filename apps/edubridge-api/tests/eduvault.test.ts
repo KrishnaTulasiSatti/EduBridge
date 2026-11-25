@@ -76,7 +76,7 @@ beforeAll(async () => {
   await connectDB('');
   const reg = await request(app)
     .post('/api/auth/register')
-    .send({ fullName: 'Rahul Kumar', email: 'rahul.vault@student.test', password: 'Strong@123', role: 'STUDENT', acceptTerms: true });
+    .send({ fullName: 'Rahul Kumar', email: 'rahul.vault@student.test', password: 'Strong@123', role: 'STUDENT', acceptTerms: true, phone: '9876543210' });
   token = `Bearer ${reg.body.accessToken}`;
   await request(app).post('/api/applications/current').set('Authorization', token);
 });

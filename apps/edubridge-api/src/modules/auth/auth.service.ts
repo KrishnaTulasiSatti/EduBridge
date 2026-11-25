@@ -40,7 +40,7 @@ async function issueTokens(user: UserDoc, req: Request, family: string = crypto.
   return { accessToken, refreshToken };
 }
 
-type ParsedRegister = Omit<RegisterInput, 'phone'> & { phone?: string };
+type ParsedRegister = RegisterInput;
 
 export async function register(input: ParsedRegister, req: Request) {
   const exists = await User.exists({ email: input.email });
@@ -138,15 +138,6 @@ export async function login(input: LoginInput, req: Request) {
   user.lockedUntil = undefined;
   user.lastLoginAt = new Date();
   await user.save();
-
-  await audit({
-    actorId: user.id,
-    actorRole: user.role,
-    action: AUDIT_ACTIONS.LOGIN_SUCCESS,
-    resourceType: 'User',
-    resourceId: user.id,
-    req,
-  });
   return { user, tokens: await issueTokens(user, req) };
 }
 
@@ -178,16 +169,9 @@ export async function refresh(rawToken: string | undefined, req: Request) {
   return { user, tokens: await issueTokens(user, req, stored.family) };
 }
 
-export async function logout(rawToken: string | undefined, req: Request) {
+export async function logout(rawToken: string | undefined) {
   if (!rawToken) return;
   const stored = await RefreshToken.findOne({ tokenHash: hashToken(rawToken) });
   if (!stored) return;
   await RefreshToken.updateMany({ family: stored.family, revokedAt: null }, { revokedAt: new Date() });
-  await audit({
-    actorId: String(stored.user),
-    action: AUDIT_ACTIONS.LOGOUT,
-    resourceType: 'Session',
-    resourceId: stored.family,
-    req,
-  });
 }

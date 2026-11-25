@@ -32,7 +32,6 @@ export default function ReviewQueuePage() {
     <>
       <PageHeader
         title="Decisions"
-        description="Verified and assessed applications. The need score ranks them, highest need first; the final decision is yours."
       />
       <Card className="overflow-hidden">
         <div className="flex flex-col gap-3 border-b border-border p-4 lg:flex-row lg:items-center">

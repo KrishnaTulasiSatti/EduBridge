@@ -2,7 +2,6 @@ import {
   BarChart3,
   ClipboardList,
   FileText,
-  FolderOpen,
   Gavel,
   HandCoins,
   HeartHandshake,
@@ -32,7 +31,6 @@ export const NAVIGATION: Record<Role, NavItem[]> = {
   STUDENT: [
     { to: '/dashboard', label: 'Overview', icon: Home },
     { to: '/dashboard/application', label: 'Application', icon: FileText },
-    { to: '/dashboard/documents', label: 'Documents', icon: FolderOpen },
     { to: '/dashboard/profile', label: 'Profile', icon: UserRound },
     { to: '/dashboard/sponsorships', label: 'Sponsorship', icon: HeartHandshake },
   ],

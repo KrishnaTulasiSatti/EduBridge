@@ -28,7 +28,7 @@ import { Button } from '@/components/ui/button';
 import { Field, Input, Select, Textarea } from '@/components/ui/input';
 import { getErrorMessage, getFieldErrors } from '@/lib/api';
 import { formatBytes, formatDate, openDocument } from '@/lib/student';
-import { cn } from '@/lib/utils';
+import { cn, formatINR } from '@/lib/utils';
 import { verificationApi } from '@/lib/verification';
 
 /* ------------------------------------------------------------ Pieces */
@@ -268,6 +268,8 @@ function toPayload(type: DocumentDTO['type'], v: Values) {
         enrolmentConfirmed: v.enrolmentConfirmed === '' || v.enrolmentConfirmed === undefined ? undefined : v.enrolmentConfirmed === 'yes',
         nameOnCard: v.nameOnCard,
       };
+    case 'FEE_RECEIPT':
+      return { ...base, nameOnReceipt: v.nameOnReceipt, amountOnReceipt: num(v.amountOnReceipt), institutionOnReceipt: v.institutionOnReceipt };
     default:
       return { ...base, nameOnDocument: v.nameOnDocument, percentage: num(v.percentage) };
   }
@@ -416,6 +418,26 @@ function ReviewForm({
           <div className="grid gap-4 sm:grid-cols-2">
             {text('nameOnDocument', 'Name on the marksheet')}
             {text('percentage', 'Percentage / CGPA as percentage', { inputMode: 'decimal' })}
+          </div>
+        </>
+      )}
+
+      {doc.type === 'FEE_RECEIPT' && (
+        <>
+          <Steps>
+            <li>Open the receipt and check it looks genuine: college name, receipt number, date, and a seal or signature.</li>
+            <li>Check it is for the current academic year and was issued to this student.</li>
+            <li>Enter the details printed on it. The amount must equal the tuition fee in the application.</li>
+          </Steps>
+          {doc.receiptAmount !== undefined && (
+            <p className="text-sm text-muted-foreground">
+              The student entered <span className="font-medium text-foreground">{formatINR(doc.receiptAmount)}</span> from this receipt.
+            </p>
+          )}
+          <div className="grid gap-4 sm:grid-cols-2">
+            {text('nameOnReceipt', 'Student name on the receipt')}
+            {text('amountOnReceipt', 'Amount on the receipt (₹)', { inputMode: 'numeric' })}
+            {text('institutionOnReceipt', 'College name on the receipt')}
           </div>
         </>
       )}

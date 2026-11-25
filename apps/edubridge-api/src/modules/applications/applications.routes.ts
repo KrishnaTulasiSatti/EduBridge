@@ -62,7 +62,12 @@ applicationsRouter.post('/current/submit', student, validateBody(submitSchema), 
 
 applicationsRouter.post('/current/documents', student, singleFile, async (req, res) => {
   const meta = documentMetaSchema.safeParse(req.body);
-  if (!meta.success) throw AppError.badRequest('Select a valid document type');
+  if (!meta.success) {
+    const fields: Record<string, string[]> = {};
+    for (const issue of meta.error.issues) (fields[String(issue.path[0])] ??= []).push(issue.message);
+    if (fields.receiptAmount) throw AppError.badRequest('Enter the amount on the receipt in whole rupees', { receiptAmount: ['Enter the amount in whole rupees'] });
+    throw AppError.badRequest('Select a valid document type', fields);
+  }
   res.status(201).json({ application: await svc.uploadDocument(req.user!.id, req.file, meta.data, req) });
 });
 

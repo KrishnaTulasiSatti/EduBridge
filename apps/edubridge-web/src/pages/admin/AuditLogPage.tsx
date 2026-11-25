@@ -95,7 +95,6 @@ export default function AuditLogPage() {
     <>
       <PageHeader
         title="Audit log"
-        description="A permanent record of important activity: who did what, to which record, and when. Entries cannot be edited or deleted."
         actions={
           <Button variant="secondary" size="sm" onClick={exportCsv} loading={exporting} disabled={!data?.total}>
             {!exporting && <Download />} Export CSV

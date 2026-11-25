@@ -73,15 +73,12 @@ export default function SponsorshipsPage() {
 
   return (
     <>
-      <PageHeader
-        title="Sponsorships"
-        description="Sponsors connect with approved students and arrange support with them directly; no money passes through EduBridge. You can end a connection if something is wrong."
-      />
+      <PageHeader title="Sponsorships" />
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Promised by sponsors" value={t ? formatINR(t.promised) : '—'} hint={c ? `${c.CONNECTED} active connection${c.CONNECTED === 1 ? '' : 's'}` : undefined} />
         <Stat label="Still needed" value={t ? formatINR(t.remaining) : '—'} hint={t ? `${t.eligibleStudents} approved student${t.eligibleStudents === 1 ? '' : 's'} not fully covered` : undefined} />
-        <Stat label="Shown to sponsors" value={t ? t.visibleStudents : '—'} hint="Students who agreed to be listed" />
+        <Stat label="Shown to sponsors" value={t ? t.visibleStudents : '—'} hint="Approved students still needing support" />
         <Stat label="Fully supported" value={t ? t.fullySupported : '—'} hint={t ? `${t.sponsors} sponsor${t.sponsors === 1 ? '' : 's'} with preferences set` : undefined} />
       </div>
 

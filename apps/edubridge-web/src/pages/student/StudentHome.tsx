@@ -2,7 +2,7 @@ import { Check } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { DOCUMENT_TYPE_LABELS, DOCUMENT_TYPES, currentAcademicYear } from '@edubridge/shared';
+import { DOCUMENT_TYPE_LABELS, currentAcademicYear, requiredDocumentTypes } from '@edubridge/shared';
 import { ApplicationStatusBadge, DocumentStatusBadge } from '@/components/application/status';
 import { OutcomeNotice } from '@/components/application/OutcomeNotice';
 import { StatusTracker } from '@/components/application/StatusTracker';
@@ -61,8 +61,7 @@ export default function StudentHome() {
             <div>
               <h2 className="font-display text-[26px] font-medium leading-tight">Apply for the {year} academic year</h2>
               <p className="mt-3 leading-relaxed text-muted-foreground">
-                The application has six short steps and usually takes about fifteen minutes. Your answers are saved as you go, so
-                you can stop and come back at any time.
+                The application has six short steps and usually takes about fifteen minutes.
               </p>
               <Button size="lg" className="mt-7" loading={starting} onClick={start}>
                 Start application
@@ -94,7 +93,7 @@ export default function StudentHome() {
         <Card>
           <CardHeader
             title="Continue your application"
-            description={`${application.applicationNumber} · Started ${formatDate(application.createdAt)}`}
+            description={`Started ${formatDate(application.createdAt)}`}
             action={<ApplicationStatusBadge status={application.status} />}
           />
           <CardBody>
@@ -149,7 +148,6 @@ export default function StudentHome() {
               <DefinitionList
                 className="sm:grid-cols-1"
                 items={[
-                  ['Application number', application.applicationNumber],
                   ['Submitted', formatDate(application.submittedAt, true)],
                   ['Amount requested', application.support.requestedAmount ? formatINR(application.support.requestedAmount) : undefined],
                 ]}
@@ -159,7 +157,7 @@ export default function StudentHome() {
           <Card>
             <CardHeader title="Documents" />
             <CardBody className="space-y-3">
-              {DOCUMENT_TYPES.map((t) => {
+              {requiredDocumentTypes(application.submittedAt).map((t) => {
                 const d = application.documents.find((x) => x.type === t);
                 return (
                   <div key={t} className="flex items-center justify-between gap-3 text-[15px]">

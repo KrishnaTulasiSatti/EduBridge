@@ -1,4 +1,4 @@
-import { BadgeCheck } from 'lucide-react';
+import { BadgeCheck, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import {
   sponsorPanStartSchema,
@@ -7,6 +7,7 @@ import {
 } from '@edubridge/shared';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Dialog } from '@/components/ui/dialog';
 import { Field, Input } from '@/components/ui/input';
 import { api, getErrorMessage, getFieldErrors } from '@/lib/api';
 
@@ -19,22 +20,24 @@ export interface VerifiedPan {
 /**
  * Sponsor sign-up: the PAN, name and date of birth are matched with the PAN registry, which emails a
  * 6-digit code to the address registered for that PAN. Entering the code verifies the PAN.
+ * The steps run in a pop-up so the sign-up form stays short.
  */
 export function SponsorPanCheck({
   fullName,
   verified,
   onVerified,
   onReset,
-  onNameError,
+  onNameChange,
   error,
 }: {
   fullName: string;
   verified: VerifiedPan | null;
   onVerified: (v: VerifiedPan) => void;
   onReset: () => void;
-  onNameError: (message: string) => void;
+  onNameChange: (name: string) => void;
   error?: string;
 }) {
+  const [open, setOpen] = useState(false);
   const [pan, setPan] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [otp, setOtp] = useState('');
@@ -50,7 +53,6 @@ export function SponsorPanCheck({
     if (!parsed.success) {
       const errs: Record<string, string> = {};
       for (const issue of parsed.error.issues) errs[String(issue.path[0])] ??= issue.message;
-      if (errs.fullName) onNameError(errs.fullName);
       setFieldErrors(errs);
       return;
     }
@@ -61,7 +63,6 @@ export function SponsorPanCheck({
       setOtp('');
     } catch (err) {
       const fields = getFieldErrors(err);
-      if (fields?.fullName) onNameError(fields.fullName[0]);
       if (fields) setFieldErrors(Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, v[0]])));
       if (!fields?.pan && !fields?.dateOfBirth && !fields?.fullName) setMessage(getErrorMessage(err));
     } finally {
@@ -81,6 +82,7 @@ export function SponsorPanCheck({
     try {
       const { data } = await api.post<SponsorPanConfirmResponse>('/auth/sponsor-pan/confirm', { reference: sent.reference, otp: otp.trim() });
       onVerified(data);
+      setOpen(false);
     } catch (err) {
       const fields = getFieldErrors(err);
       if (fields?.otp) setFieldErrors({ otp: fields.otp[0] });
@@ -103,15 +105,13 @@ export function SponsorPanCheck({
 
   if (verified) {
     return (
-      <div className="flex items-start justify-between gap-3 rounded-lg border border-success/25 bg-success-soft px-4 py-3">
-        <div className="flex gap-3">
-          <BadgeCheck className="mt-0.5 size-4 shrink-0 text-success" />
-          <div className="text-sm">
-            <p className="font-medium text-success">PAN verified</p>
-            <p className="text-foreground/80">
-              {verified.maskedPan} · {verified.fullName}
-            </p>
-          </div>
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-success/25 bg-success-soft px-4 py-2.5">
+        <div className="flex items-center gap-3">
+          <BadgeCheck className="size-4 shrink-0 text-success" />
+          <p className="text-sm">
+            <span className="font-medium text-success">PAN verified</span>
+            <span className="text-foreground/80"> · {verified.maskedPan}</span>
+          </p>
         </div>
         <Button variant="link" size="sm" onClick={reset}>
           Change
@@ -121,76 +121,109 @@ export function SponsorPanCheck({
   }
 
   return (
-    <section className="space-y-4 rounded-lg border border-border-strong bg-surface px-4 py-4">
-      <div>
-        <h2 className="text-sm font-medium">Verify your PAN</h2>
-        <p className="mt-0.5 text-[13px] text-muted-foreground">
-          Every sponsor is verified, so students know who is supporting them. We send a code to the email registered with your PAN.
-        </p>
+    <>
+      <div
+        className={
+          'flex items-center justify-between gap-3 rounded-lg border border-dashed px-4 py-2.5 ' +
+          (error ? 'border-danger bg-danger-soft/50' : 'border-border-strong bg-sunken/50')
+        }
+      >
+        <div className="flex min-w-0 items-center gap-3">
+          <ShieldCheck className="size-4 shrink-0 text-primary-ink" />
+          <div className="min-w-0 text-sm">
+            <p className="font-medium">Verify your PAN</p>
+            <p className={error ? 'text-[13px] text-danger' : 'text-[13px] text-muted-foreground'}>{error ?? 'Required for every sponsor'}</p>
+          </div>
+        </div>
+        <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
+          Verify PAN
+        </Button>
       </div>
 
-      {message && <Alert tone="danger">{message}</Alert>}
-      {error && !message && <Alert tone="danger">{error}</Alert>}
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Verify your PAN"
+        description="Every sponsor is verified, so students know who is supporting them. We send a code to the email registered with your PAN."
+        footer={
+          !sent ? (
+            <>
+              <Button variant="ghost" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={sendCode} loading={busy === 'start'}>
+                Send code
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="link" size="sm" className="mr-auto" onClick={reset}>
+                Change PAN
+              </Button>
+              <Button variant="ghost" onClick={sendCode} disabled={busy !== null}>
+                Send a new code
+              </Button>
+              <Button onClick={confirm} loading={busy === 'confirm'}>
+                Verify PAN
+              </Button>
+            </>
+          )
+        }
+      >
+        <div className="space-y-4">
+          {message && <Alert tone="danger">{message}</Alert>}
 
-      {!sent ? (
-        <>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="PAN" htmlFor="pan" error={fieldErrors.pan}>
-              <Input
-                id="pan"
-                value={pan}
-                onChange={(e) => setPan(e.target.value.toUpperCase())}
-                maxLength={10}
-                autoComplete="off"
-                placeholder="ABCPK1234L"
-                className="uppercase tracking-wide"
-                invalid={!!fieldErrors.pan}
-              />
-            </Field>
-            <Field label="Date of birth" htmlFor="dateOfBirth" error={fieldErrors.dateOfBirth}>
-              <Input id="dateOfBirth" type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} invalid={!!fieldErrors.dateOfBirth} />
-            </Field>
-          </div>
-          <Button variant="secondary" onClick={sendCode} loading={busy === 'start'}>
-            Send code
-          </Button>
-        </>
-      ) : (
-        <>
-          <p className="text-sm">
-            We sent a 6-digit code to <span className="font-medium">{sent.otpSentTo}</span>. It is valid for 10 minutes.
-          </p>
-          <Field label="Code" htmlFor="otp" error={fieldErrors.otp}>
-            <Input
-              id="otp"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  confirm();
-                }
-              }}
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              maxLength={6}
-              className="max-w-40 tracking-[0.3em]"
-              invalid={!!fieldErrors.otp}
-            />
-          </Field>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button onClick={confirm} loading={busy === 'confirm'}>
-              Verify PAN
-            </Button>
-            <Button variant="ghost" onClick={sendCode} disabled={busy !== null}>
-              Send a new code
-            </Button>
-            <Button variant="link" size="sm" onClick={reset}>
-              Change PAN
-            </Button>
-          </div>
-        </>
-      )}
-    </section>
+          {!sent ? (
+            <>
+              <Field label="Full name" htmlFor="panName" hint="As printed on your PAN card" error={fieldErrors.fullName}>
+                <Input id="panName" value={fullName} onChange={(e) => onNameChange(e.target.value)} autoComplete="name" invalid={!!fieldErrors.fullName} />
+              </Field>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="PAN" htmlFor="pan" error={fieldErrors.pan}>
+                  <Input
+                    id="pan"
+                    value={pan}
+                    onChange={(e) => setPan(e.target.value.toUpperCase())}
+                    maxLength={10}
+                    autoComplete="off"
+                    placeholder="ABCPK1234L"
+                    className="uppercase tracking-wide"
+                    invalid={!!fieldErrors.pan}
+                  />
+                </Field>
+                <Field label="Date of birth" htmlFor="dateOfBirth" error={fieldErrors.dateOfBirth}>
+                  <Input id="dateOfBirth" type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} invalid={!!fieldErrors.dateOfBirth} />
+                </Field>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-sm">
+                We sent a 6-digit code to <span className="font-medium">{sent.otpSentTo}</span>. It is valid for 10 minutes.
+              </p>
+              <Field label="Code" htmlFor="otp" error={fieldErrors.otp}>
+                <Input
+                  id="otp"
+                  value={otp}
+                  autoFocus
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      confirm();
+                    }
+                  }}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  className="max-w-44 text-center tracking-[0.4em]"
+                  invalid={!!fieldErrors.otp}
+                />
+              </Field>
+            </>
+          )}
+        </div>
+      </Dialog>
+    </>
   );
 }

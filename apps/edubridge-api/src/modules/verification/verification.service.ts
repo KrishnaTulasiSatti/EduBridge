@@ -7,6 +7,7 @@ import {
   DOCUMENT_TYPES,
   FINAL_DOCUMENT_STATUSES,
   INCOME_CERTIFICATE_VALIDITY_YEARS,
+  requiredDocumentTypes,
   incomeCertificateExpiry,
   incomeCertificateValid,
   VERIFICATION_STAGE,
@@ -32,7 +33,7 @@ import { Application, StudentDocument, type ApplicationDoc, type StudentDocument
 import { toApplicationDTO } from '../applications/applications.service';
 import { AUDIT_ACTIONS, audit } from '../audit/audit.service';
 import { User } from '../auth/user.model';
-import { namesMatch, rollNumbersMatch } from '../eduvault/verify';
+import { institutionsMatch, namesMatch, rollNumbersMatch } from '../eduvault/verify';
 import { VaultError, vaultClient } from '../eduvault/vaultClient';
 import { checkInstitution } from './registry';
 import { assessAfterVolunteerReview } from '../assessment/assessment.service';
@@ -381,6 +382,18 @@ function compareChecks(input: DocumentReviewInput, doc: StudentDocumentDoc, app:
     }
   }
 
+  if (input.type === 'FEE_RECEIPT') {
+    if (input.nameOnReceipt) add('Name on receipt', studentName, input.nameOnReceipt, namesMatch(studentName, input.nameOnReceipt));
+    if (input.amountOnReceipt !== undefined) {
+      const tuition = app.support?.expenses?.tuition ?? undefined;
+      add('Amount on receipt', tuition != null ? inr(tuition) : undefined, inr(input.amountOnReceipt), tuition != null && tuition === input.amountOnReceipt);
+    }
+    if (input.institutionOnReceipt) {
+      const entered = education.institutionName as string | undefined;
+      add('College on receipt', entered, input.institutionOnReceipt, !!entered && institutionsMatch(entered, input.institutionOnReceipt));
+    }
+  }
+
   if (input.type === 'MARKSHEET') {
     if (input.nameOnDocument) add('Name on marksheet', studentName, input.nameOnDocument, namesMatch(studentName, input.nameOnDocument));
     if (input.percentage !== undefined) {
@@ -396,6 +409,7 @@ const METHOD: Record<DocumentType, DocumentReviewDTO['method']> = {
   INCOME_CERTIFICATE: 'AP_SEVA_PORTAL',
   COLLEGE_ID: 'INSTITUTION_CONFIRMATION',
   MARKSHEET: 'DOCUMENT_INSPECTION',
+  FEE_RECEIPT: 'DOCUMENT_INSPECTION',
 };
 
 export async function reviewDocument(user: Actor, appId: string, docId: string, input: DocumentReviewInput, req: Request) {
@@ -466,7 +480,7 @@ export async function submitReview(user: Actor, appId: string, input: VolunteerR
   const docs = await StudentDocument.find({ application: app._id });
 
   const problems: string[] = [];
-  for (const t of DOCUMENT_TYPES) {
+  for (const t of requiredDocumentTypes(app.submittedAt)) {
     const d = docs.find((x) => x.type === t);
     if (!d) problems.push(`${DOCUMENT_TYPE_LABELS[t]} is missing`);
     else if (!FINAL_DOCUMENT_STATUSES.includes(d.status)) problems.push(`Record a result for the ${DOCUMENT_TYPE_LABELS[t].toLowerCase()}`);
@@ -512,6 +526,11 @@ function findInconsistencies(app: ApplicationDoc, docs: StudentDocumentDoc[], in
   const roll = education.rollNumber as string | undefined;
   if (collegeId?.rollNumber && roll && !rollNumbersMatch(collegeId.rollNumber, roll)) {
     out.push({ document: 'COLLEGE_ID', field: 'Roll number', application: roll, found: collegeId.rollNumber, severity: 'warning' });
+  }
+  const receipt = docs.find((d) => d.type === 'FEE_RECEIPT');
+  const tuition = app.support?.expenses?.tuition ?? undefined;
+  if (receipt?.receiptAmount != null && tuition != null && receipt.receiptAmount !== tuition) {
+    out.push({ document: 'FEE_RECEIPT', field: 'Receipt amount', application: inr(tuition), found: inr(receipt.receiptAmount), severity: 'warning' });
   }
   if (institution.result === 'NOT_FOUND') {
     out.push({ document: 'COLLEGE_ID', field: 'Institution', application: institution.entered.institutionName, found: 'Not registered with EduVault — confirm enrolment directly with the college', severity: 'info' });

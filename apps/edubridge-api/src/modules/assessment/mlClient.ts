@@ -1,5 +1,6 @@
 import type { ModelReportDTO, NeedFeatures, NeedLevel } from '@edubridge/shared';
 import { env } from '../../config/env';
+import { SERVICE_TIMEOUT_MS } from '../../utils/wakeServices';
 import { AppError } from '../../utils/AppError';
 
 /**
@@ -23,7 +24,7 @@ async function call<T>(path: string, init: RequestInit = {}, timeoutMs = 10_000)
   try {
     res = await fetch(`${env.ML_SERVICE_URL}${path}`, { ...init, headers, signal: AbortSignal.timeout(timeoutMs) });
   } catch {
-    throw new MlError(503, 'The ML service is not running. Start it with “npm run dev” (or “npm run dev -w @edubridge/ml-service”).');
+    throw new MlError(503, 'The ML service could not be reached. Assessments use the rule-based score until it is back.');
   }
   const body = (await res.json().catch(() => null)) as (T & { detail?: unknown }) | null;
   if (!res.ok) {
@@ -47,10 +48,10 @@ export interface TrainingSample {
 
 export const mlClient = {
   predict(features: NeedFeatures) {
-    return call<PredictionResponse>('/predict', { method: 'POST', body: JSON.stringify({ features }) }, 5_000);
+    return call<PredictionResponse>('/predict', { method: 'POST', body: JSON.stringify({ features }) }, 20_000);
   },
   report() {
-    return call<ModelReportDTO>('/model');
+    return call<ModelReportDTO>('/model', {}, SERVICE_TIMEOUT_MS);
   },
   train(samples: TrainingSample[]) {
     return call<ModelReportDTO>('/train', { method: 'POST', body: JSON.stringify({ samples, source: 'REVIEWED_DECISIONS' }) }, 120_000);

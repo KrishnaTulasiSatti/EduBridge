@@ -1,7 +1,7 @@
 import * as notify from '../notifications/notify';
 import { Router } from 'express';
 import { z } from 'zod';
-import { ACCOUNT_STATUSES, ROLES } from '@edubridge/shared';
+import { ACCOUNT_STATUSES, ROLES, UNLISTED_AUDIT_ACTIONS } from '@edubridge/shared';
 import { authenticate, forgetAccount, requireRole } from '../../middleware/auth';
 import { validateBody } from '../../middleware/validate';
 import { AppError } from '../../utils/AppError';
@@ -44,7 +44,7 @@ usersRouter.get('/stats', async (_req, res) => {
   const [byRole, pendingVolunteers, recentActivity, applications] = await Promise.all([
     User.aggregate<{ _id: string; count: number }>([{ $group: { _id: '$role', count: { $sum: 1 } } }]),
     User.countDocuments({ role: 'VOLUNTEER', status: 'PENDING_APPROVAL' }),
-    AuditLog.find().sort({ createdAt: -1 }).limit(8).populate('actor', 'fullName role').lean(),
+    AuditLog.find({ action: { $nin: UNLISTED_AUDIT_ACTIONS } }).sort({ createdAt: -1 }).limit(8).populate('actor', 'fullName role').lean(),
     applicationCounts(),
   ]);
   const counts = Object.fromEntries(ROLES.map((r) => [r, byRole.find((b) => b._id === r)?.count ?? 0]));

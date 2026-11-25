@@ -50,7 +50,7 @@ export default function UsersPage() {
 
   return (
     <>
-      <PageHeader title="Users" description="Approve volunteers and manage access to EduBridge." />
+      <PageHeader title="Users" />
       <Card className="overflow-hidden">
         <div className="flex flex-col gap-3 border-b border-border p-4 lg:flex-row lg:items-center">
           <div className="flex gap-1 overflow-x-auto scrollbar-soft" role="tablist">

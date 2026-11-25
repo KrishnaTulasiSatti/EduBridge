@@ -25,7 +25,7 @@ import { formatDate } from '@/lib/student';
 import { cn, formatINR, timeAgo } from '@/lib/utils';
 import { useQueue, verificationApi } from '@/lib/verification';
 
-const SHORT: Record<DocumentType, string> = { MARKSHEET: 'Marks', INCOME_CERTIFICATE: 'Income', COLLEGE_ID: 'College ID' };
+const SHORT: Record<DocumentType, string> = { MARKSHEET: 'Marks', INCOME_CERTIFICATE: 'Income', COLLEGE_ID: 'College ID', FEE_RECEIPT: 'Fee receipt' };
 const DOT: Record<DocumentStatus, string> = {
   PENDING: 'bg-border-strong',
   PROCESSING: 'bg-info',
@@ -53,7 +53,8 @@ export function DocumentStrip({ documents }: { documents: QueueItemDTO['document
 
 const TAB_LABEL: Record<QueueScope, string> = {
   available: 'Waiting',
-  mine: 'Assigned to me',
+  // Nobody assigns work: "Start verification" holds an application for the person who started it.
+  mine: 'Started by me',
   reviewed: 'Reviewed',
   all: 'All in verification',
 };
@@ -64,7 +65,7 @@ export default function QueuePage({
   scopes,
 }: {
   title: string;
-  description: string;
+  description?: string;
   scopes: QueueScope[];
 }) {
   const { user } = useAuth();

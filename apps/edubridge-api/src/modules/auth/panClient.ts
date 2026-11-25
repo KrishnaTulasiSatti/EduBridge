@@ -1,4 +1,5 @@
 import { env } from '../../config/env';
+import { SERVICE_TIMEOUT_MS } from '../../utils/wakeServices';
 import { AppError } from '../../utils/AppError';
 
 /**
@@ -15,7 +16,7 @@ export type PanConfirmResult =
   | { result: 'EXPIRED' | 'TOO_MANY_ATTEMPTS' | 'ALREADY_USED' | 'INACTIVE' };
 
 const unavailable = () =>
-  new AppError(503, 'PAN_REGISTRY_UNAVAILABLE', 'PAN verification is not available right now. Please try again in a few minutes.');
+  new AppError(503, 'PAN_REGISTRY_UNAVAILABLE', 'We could not connect to the PAN verification service. Please try again in a minute.');
 
 async function call<T>(path: string, body: unknown): Promise<T> {
   if (!env.PAN_REGISTRY_CLIENT_SECRET) {
@@ -31,7 +32,7 @@ async function call<T>(path: string, body: unknown): Promise<T> {
         Authorization: `Basic ${Buffer.from(`${env.PAN_REGISTRY_CLIENT_ID}:${env.PAN_REGISTRY_CLIENT_SECRET}`).toString('base64')}`,
       },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(SERVICE_TIMEOUT_MS),
     });
   } catch {
     throw unavailable();

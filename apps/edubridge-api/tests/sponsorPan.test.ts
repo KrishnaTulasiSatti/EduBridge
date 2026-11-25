@@ -16,7 +16,7 @@ const sponsor = {
   email: 'sunita@sponsor.test',
   password: 'Strong@123',
   role: 'SPONSOR',
-  acceptTerms: true,
+  acceptTerms: true, phone: '9876543210',
 };
 const verifySpy = vi.spyOn(panClient, 'verify');
 const confirmSpy = vi.spyOn(panClient, 'confirm');

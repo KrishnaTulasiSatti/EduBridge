@@ -23,13 +23,15 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({ className, inva
   return (
     <div className="relative">
       {prefix && (
-        <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[15px] text-muted-foreground">{prefix}</span>
+        <span className="pointer-events-none absolute inset-y-px left-px flex items-center rounded-l-[7px] border-r border-border bg-sunken px-3 text-[15px] text-muted-foreground">
+          {prefix}
+        </span>
       )}
       <input
         ref={ref}
         type={isPassword && show ? 'text' : type}
         aria-invalid={invalid || undefined}
-        className={cn(control, 'h-10 px-3.5', prefix && 'pl-8', isPassword && 'pr-11', className)}
+        className={cn(control, 'h-10 px-3.5', prefix && (prefix.length > 1 ? 'pl-[4.25rem]' : 'pl-12'), isPassword && 'pr-11', className)}
         {...props}
       />
       {isPassword && (

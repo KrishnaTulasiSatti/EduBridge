@@ -47,7 +47,7 @@ beforeAll(async () => {
     email: 'kavya@sponsor.test',
     password: DEMO_PASSWORD,
     role: 'SPONSOR',
-    acceptTerms: true,
+    acceptTerms: true, phone: '9876543210',
     panToken: issuePanTokenForTests('AAAPN1234K', 'Kavya Nair'),
   });
   sponsor2 = `Bearer ${reg.body.accessToken}`;
@@ -65,6 +65,7 @@ beforeAll(async () => {
     ['MARKSHEET', {}],
     ['INCOME_CERTIFICATE', { certificateNumber: 'IC2026-0012345', aadhaarNumber: '234567890124' }],
     ['COLLEGE_ID', { rollNumber: '21TEST0042' }],
+    ['FEE_RECEIPT', { receiptAmount: '65000' }],
   ] as const) {
     const r = request(app).post('/api/applications/current/documents').set('Authorization', student).field('type', type);
     for (const [k, v] of Object.entries(extra)) r.field(k, v);
@@ -122,18 +123,13 @@ describe('connecting sponsors with students', () => {
     }
   });
 
-  it('lists students only after they agree to be shown and to share contact details', async () => {
-    expect((await request(app).get('/api/sponsor/students').set('Authorization', sponsor)).body.total).toBe(0);
-
+  it('lists approved students straight away, with the optional note', async () => {
     const funding = await request(app).get('/api/funding/me').set('Authorization', student);
-    expect(funding.body).toMatchObject({ eligible: true, approvedAmount: 60000, promised: 0, remaining: 60000, visible: false });
+    expect(funding.body).toMatchObject({ eligible: true, approvedAmount: 60000, promised: 0, remaining: 60000, visible: true });
 
-    const noConsent = await request(app).put('/api/funding/me/visibility').set('Authorization', student).send({ visible: true });
-    expect(noConsent.status).toBe(400);
-    expect(noConsent.body.error.details.shareContact).toBeDefined();
-
-    const res = await request(app).put('/api/funding/me/visibility').set('Authorization', student).send({ visible: true, shareContact: true, noteToSponsors: 'Thank you for reading.' });
-    expect(res.body.visible).toBe(true);
+    const res = await request(app).put('/api/funding/me/note').set('Authorization', student).send({ noteToSponsors: 'Thank you for reading.' });
+    expect(res.status).toBe(200);
+    expect(res.body.noteToSponsors).toBe('Thank you for reading.');
 
     const after = await request(app).get('/api/sponsor/students').set('Authorization', sponsor);
     expect(after.body.total).toBe(1);
@@ -228,7 +224,7 @@ describe('connecting sponsors with students', () => {
     await flushMail();
     const subjects = (email: string) => testOutbox.filter((m) => m.to === email).map((m) => m.subject);
     const student = subjects('student@edubridge.test');
-    for (const rx of [/^We received your application EB-/, /^Verification has started/, /has been approved$/, /^Priya Sharma wants to support your education$/, /connection with Priya Sharma has ended$/]) {
+    for (const rx of [/^We received your application$/, /^Verification has started/, /has been approved$/, /^Priya Sharma wants to support your education$/, /connection with Priya Sharma has ended$/]) {
       expect(student.some((t) => rx.test(t))).toBe(true);
     }
     expect(subjects('sponsor@edubridge.test')).toEqual(expect.arrayContaining(['You are connected with Rahul Kumar']));
@@ -243,17 +239,17 @@ describe('connecting sponsors with students', () => {
     expect(connectedMail.text).toContain('Keep going!');
   });
 
-  it('asks students who agreed before contact sharing to agree again', async () => {
-    await Application.updateOne({ _id: appId }, { $unset: { 'sponsorVisibility.shareContact': 1 } });
+  it('ignores the old opt-in flags: listing depends only on approval and remaining need', async () => {
+    await Application.updateOne({ _id: appId }, { $set: { 'sponsorVisibility.visible': false }, $unset: { 'sponsorVisibility.shareContact': 1 } });
     const funding = await request(app).get('/api/funding/me').set('Authorization', student);
-    expect(funding.body).toMatchObject({ visible: false, needsNewConsent: true });
-    expect((await request(app).get('/api/sponsor/students').set('Authorization', sponsor)).body.total).toBe(0);
-    await request(app).put('/api/funding/me/visibility').set('Authorization', student).send({ visible: true, shareContact: true });
+    const listed = (await request(app).get('/api/sponsor/students').set('Authorization', sponsor)).body.total;
+    expect(listed).toBe(funding.body.visible ? 1 : 0);
+    expect(funding.body.visible).toBe(funding.body.status !== 'FULLY_FUNDED');
   });
 
   it('records connections in the audit log', async () => {
     const actions = await AuditLog.distinct('action');
-    for (const a of ['SPONSOR_PREFERENCES_UPDATED', 'SPONSOR_VISIBILITY_CHANGED', 'SPONSOR_CONNECTED', 'CONNECTION_ENDED']) expect(actions).toContain(a);
+    for (const a of ['SPONSOR_PREFERENCES_UPDATED', 'SPONSOR_CONNECTED', 'CONNECTION_ENDED']) expect(actions).toContain(a);
   });
 
   it('converts records from the old payment flow', async () => {

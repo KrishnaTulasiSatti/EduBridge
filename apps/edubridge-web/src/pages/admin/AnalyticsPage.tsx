@@ -34,7 +34,6 @@ export default function AnalyticsPage() {
     <>
       <PageHeader
         title="Analytics"
-        description="Applications, verification, decisions and sponsorship across EduBridge. Every figure is counted live from the records."
         meta={data && <span>Counted {timeAgo(data.generatedAt)}</span>}
         actions={
           <Button variant="secondary" size="sm" onClick={() => void reload()} loading={loading && !!data}>

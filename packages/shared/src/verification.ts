@@ -122,9 +122,18 @@ export const marksheetReviewSchema = z.object({
   percentage: z.number().min(0).max(100).optional(),
 });
 
+export const feeReceiptReviewSchema = z.object({
+  type: z.literal('FEE_RECEIPT'),
+  outcome,
+  note,
+  nameOnReceipt: z.string().trim().max(120).optional().or(z.literal('')),
+  amountOnReceipt: z.number().int().min(0).max(1_00_00_000).optional(),
+  institutionOnReceipt: z.string().trim().max(150).optional().or(z.literal('')),
+});
+
 /** Reviewers must back a "Verified" result with the details they confirmed. */
 export const documentReviewSchema = z
-  .discriminatedUnion('type', [incomeReviewSchema, collegeIdReviewSchema, marksheetReviewSchema])
+  .discriminatedUnion('type', [incomeReviewSchema, collegeIdReviewSchema, marksheetReviewSchema, feeReceiptReviewSchema])
   .superRefine((v, ctx) => {
     if (v.outcome !== 'VERIFIED') return;
     const need = (key: string, ok: boolean, message: string) => {
@@ -142,6 +151,10 @@ export const documentReviewSchema = z
       need('enrolmentConfirmed', v.enrolmentConfirmed === true, 'A college ID can only be verified once enrolment is confirmed');
     }
     if (v.type === 'MARKSHEET') need('nameOnDocument', !!v.nameOnDocument, 'Enter the name printed on the marksheet');
+    if (v.type === 'FEE_RECEIPT') {
+      need('nameOnReceipt', !!v.nameOnReceipt, 'Enter the student name printed on the receipt');
+      need('amountOnReceipt', v.amountOnReceipt !== undefined, 'Enter the amount printed on the receipt');
+    }
   });
 export type DocumentReviewInput = z.input<typeof documentReviewSchema>;
 

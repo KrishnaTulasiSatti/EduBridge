@@ -53,7 +53,7 @@ async function login(email: string, password = DEMO_PASSWORD) {
 async function registerStudent(email: string) {
   const res = await request(app)
     .post('/api/auth/register')
-    .send({ fullName: 'Second Student', email, password: 'Strong@123', role: 'STUDENT', acceptTerms: true });
+    .send({ fullName: 'Second Student', email, password: 'Strong@123', role: 'STUDENT', acceptTerms: true, phone: '9876543210' });
   return `Bearer ${res.body.accessToken}`;
 }
 
@@ -131,6 +131,29 @@ describe('student application flow', () => {
     expect(noNumber.body.error.details.certificateNumber).toBeDefined();
   });
 
+  it('accepts a fee receipt only when its amount equals the tuition fee', async () => {
+    await request(app).patch('/api/applications/current').set('Authorization', student).send({ support });
+    const wrong = await request(app)
+      .post('/api/applications/current/documents')
+      .set('Authorization', student)
+      .field('type', 'FEE_RECEIPT')
+      .field('receiptAmount', '60000')
+      .attach('file', PDF, 'receipt.pdf');
+    expect(wrong.status).toBe(400);
+    expect(wrong.body.error.details.receiptAmount[0]).toMatch(/does not match the tuition fee you entered \(₹65,000\)/);
+
+    const right = await request(app)
+      .post('/api/applications/current/documents')
+      .set('Authorization', student)
+      .field('type', 'FEE_RECEIPT')
+      .field('receiptAmount', '65000')
+      .attach('file', PDF, 'receipt.pdf');
+    expect(right.status).toBe(201);
+    const receipt = right.body.application.documents.find((d: { type: string }) => d.type === 'FEE_RECEIPT');
+    expect(receipt.receiptAmount).toBe(65000);
+    await request(app).delete(`/api/applications/current/documents/${receipt.id}`).set('Authorization', student);
+  });
+
   it('uploads, replaces and deletes documents', async () => {
     const up = await request(app)
       .post('/api/applications/current/documents')
@@ -166,6 +189,7 @@ describe('student application flow', () => {
       ['MARKSHEET', {}],
       ['INCOME_CERTIFICATE', { certificateNumber: 'IC2026-0012345', aadhaarNumber: '234567890124' }],
       ['COLLEGE_ID', { rollNumber: '21TEST0042' }],
+      ['FEE_RECEIPT', { receiptAmount: '65000' }],
     ] as const) {
       const r = request(app).post('/api/applications/current/documents').set('Authorization', student).field('type', type);
       for (const [k, v] of Object.entries(extra)) r.field(k, v);
@@ -226,7 +250,7 @@ describe('student application flow', () => {
     const list = await request(app).get('/api/applications?search=Rahul').set('Authorization', admin);
     expect(list.status).toBe(200);
     expect(list.body.total).toBe(1);
-    expect(list.body.items[0]).toMatchObject({ status: 'SUBMITTED', requestedAmount: 80000, documentsUploaded: 3 });
+    expect(list.body.items[0]).toMatchObject({ status: 'SUBMITTED', requestedAmount: 80000, documentsUploaded: 4 });
     expect((await request(app).get('/api/applications').set('Authorization', student)).status).toBe(403);
 
     const stats = await request(app).get('/api/users/stats').set('Authorization', admin);

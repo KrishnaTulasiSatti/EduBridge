@@ -4,7 +4,8 @@ import { env } from './config/env';
 import { scheduleRetention } from './modules/retention/retention.service';
 import { flushMail } from './modules/notifications/mailer';
 import { migrateToConnections } from './modules/sponsorship/migrate';
-import { ADMIN_EMAIL, seedAdmin } from './scripts/seedData';
+import { ADMIN_EMAIL, renameDefaultAdmin, seedAdmin } from './scripts/seedData';
+import { wakeServices, warnAboutLocalServiceUrls } from './utils/wakeServices';
 
 async function main() {
   const inMemory = await connectDB();
@@ -15,6 +16,9 @@ async function main() {
   }
 
   await migrateToConnections();
+  await renameDefaultAdmin();
+  warnAboutLocalServiceUrls();
+  wakeServices(true);
   scheduleRetention();
 
   const server = createApp().listen(env.PORT, () => {

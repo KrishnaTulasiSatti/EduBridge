@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { DOCUMENT_TYPES, currentAcademicYear } from '@edubridge/shared';
+import { currentAcademicYear, requiredDocumentTypes } from '@edubridge/shared';
 import { ApplicationSummary } from '@/components/application/ApplicationSummary';
 import { ApplicationWizard } from '@/components/application/ApplicationWizard';
 import { DocumentCard } from '@/components/application/DocumentCard';
@@ -64,8 +64,6 @@ export default function ApplicationPage() {
 
   const meta = (
     <>
-      <span>{application.applicationNumber}</span>
-      <span aria-hidden>·</span>
       <ApplicationStatusBadge status={application.status} />
     </>
   );
@@ -95,7 +93,7 @@ export default function ApplicationPage() {
           <Card>
             <CardHeader title="Documents" />
             <CardBody className="space-y-4">
-              {DOCUMENT_TYPES.map((t) => (
+              {requiredDocumentTypes(application.submittedAt).map((t) => (
                 <DocumentCard key={t} type={t} doc={application.documents.find((d) => d.type === t)} editable={false} />
               ))}
             </CardBody>

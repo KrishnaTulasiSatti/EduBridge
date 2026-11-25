@@ -27,6 +27,7 @@ describe('auth', () => {
     email: 'Test.Student@Example.com',
     password: 'Strong@123',
     role: 'STUDENT',
+    phone: '9876543210',
     acceptTerms: true,
   };
 
@@ -55,6 +56,15 @@ describe('auth', () => {
       .send({ ...student, email: 'weak@example.com', password: 'short' });
     expect(weak.status).toBe(400);
     expect(weak.body.error.details.password).toBeDefined();
+  });
+
+  it('requires a valid mobile number', async () => {
+    const { phone: _phone, ...noPhone } = student;
+    const missing = await request(app).post('/api/auth/register').send({ ...noPhone, email: 'nophone@example.com' });
+    expect(missing.status).toBe(400);
+    expect(missing.body.error.details.phone).toBeDefined();
+    const bad = await request(app).post('/api/auth/register').send({ ...student, email: 'badphone@example.com', phone: '12345' });
+    expect(bad.status).toBe(400);
   });
 
   it('does not allow self-registering as admin', async () => {

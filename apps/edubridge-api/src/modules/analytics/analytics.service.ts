@@ -93,7 +93,7 @@ export async function platformAnalytics(): Promise<AnalyticsDTO> {
           promised: { $sum: { $ifNull: ['$funding.promised', 0] } },
           eligible: { $sum: { $cond: [{ $in: ['$status', ['APPROVED', 'PARTIALLY_FUNDED']] }, 1, 0] } },
           visible: {
-            $sum: { $cond: [{ $and: [{ $in: ['$status', ['APPROVED', 'PARTIALLY_FUNDED']] }, { $eq: ['$sponsorVisibility.visible', true] }, { $eq: ['$sponsorVisibility.shareContact', true] }] }, 1, 0] },
+            $sum: { $cond: [{ $in: ['$status', ['APPROVED', 'PARTIALLY_FUNDED']] }, 1, 0] },
           },
         },
       },

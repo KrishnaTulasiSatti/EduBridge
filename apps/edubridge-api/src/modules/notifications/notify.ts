@@ -124,13 +124,12 @@ export function applicationSubmitted(applicationId: unknown) {
     sendMail(
       buildEmail({
         to: found.student.email,
-        subject: `We received your application ${found.app.applicationNumber}`,
+        subject: 'We received your application',
         name: found.student.fullName,
         paragraphs: [
           'Thank you. Your application has been submitted and is now waiting for a volunteer to verify your documents.',
           'We will email you when verification starts and again when a decision is made.',
         ],
-        details: [['Application number', found.app.applicationNumber]],
         button: { label: 'Track your application', path: '/dashboard/application' },
       }),
     );
@@ -160,13 +159,12 @@ export function verificationStarted(applicationId: unknown) {
     sendMail(
       buildEmail({
         to: found.student.email,
-        subject: `Verification has started for ${found.app.applicationNumber}`,
+        subject: 'Verification has started for your application',
         name: found.student.fullName,
         paragraphs: [
           'A volunteer has started checking your documents. You do not need to do anything now.',
           'If something needs clarifying, the EduBridge team may contact you.',
         ],
-        details: [['Application number', found.app.applicationNumber]],
         button: { label: 'Track your application', path: '/dashboard/application' },
       }),
     );
@@ -178,28 +176,27 @@ export function decisionMade(applicationId: unknown, decision: 'APPROVED' | 'ON_
     const found = await studentOf(applicationId);
     if (!found) return;
     const quote = messageToStudent ? { from: 'the EduBridge team', text: messageToStudent } : undefined;
-    const number = found.app.applicationNumber;
     const content = {
       APPROVED: {
-        subject: `Your application ${number} has been approved`,
+        subject: 'Your application has been approved',
         paragraphs: [
           `Congratulations! Your application has been approved for sponsorship of up to ${inr(approvedAmount ?? 0)}.`,
-          'Next step: open the Sponsorship page and choose to show your profile to sponsors. A sponsor who connects with you will see your name, email and phone number and will contact you directly.',
+          'Your anonymised profile is now shown to sponsors. A sponsor who connects with you will see your name, email and phone number and will contact you directly.',
         ],
         button: { label: 'Go to Sponsorship', path: '/dashboard/sponsorships' },
       },
       ON_HOLD: {
-        subject: `Your application ${number} is on hold`,
+        subject: 'Your application is on hold',
         paragraphs: ['Your application has been put on hold for now. This is not a final decision.', 'The EduBridge team may contact you if they need more information.'],
         button: { label: 'View your application', path: '/dashboard/application' },
       },
       REJECTED: {
-        subject: `An update on your application ${number}`,
+        subject: 'An update on your application',
         paragraphs: ['Thank you for applying. After a careful review, we are not able to approve your application this time.'],
         button: { label: 'View your application', path: '/dashboard/application' },
       },
     }[decision];
-    sendMail(buildEmail({ to: found.student.email, name: found.student.fullName, details: [['Application number', number]], quote, ...content }));
+    sendMail(buildEmail({ to: found.student.email, name: found.student.fullName, quote, ...content }));
   });
 }
 

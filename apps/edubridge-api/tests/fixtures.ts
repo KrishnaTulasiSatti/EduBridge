@@ -6,7 +6,7 @@ import { User } from '../src/modules/auth/user.model';
 export const DEMO_PASSWORD = 'Demo@1234';
 
 export const DEMO_USERS: { fullName: string; email: string; role: Role; status?: 'ACTIVE' | 'PENDING_APPROVAL' }[] = [
-  { fullName: 'Ananya Rao', email: 'admin@edubridge.test', role: 'ADMIN' },
+  { fullName: 'Admin', email: 'admin@edubridge.test', role: 'ADMIN' },
   { fullName: 'Rahul Kumar', email: 'student@edubridge.test', role: 'STUDENT' },
   { fullName: 'Meera Iyer', email: 'volunteer@edubridge.test', role: 'VOLUNTEER' },
   { fullName: 'Priya Sharma', email: 'sponsor@edubridge.test', role: 'SPONSOR' },

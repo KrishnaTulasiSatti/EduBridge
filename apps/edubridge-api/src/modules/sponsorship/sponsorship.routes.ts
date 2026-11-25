@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { connectSchema, endConnectionSchema, sponsorPreferencesSchema, sponsorVisibilitySchema } from '@edubridge/shared';
+import { connectSchema, endConnectionSchema, sponsorPreferencesSchema, sponsorNoteSchema } from '@edubridge/shared';
 import { authenticate, requireRole } from '../../middleware/auth';
 import { validateBody } from '../../middleware/validate';
 import * as svc from './sponsorship.service';
@@ -37,8 +37,8 @@ fundingRouter.use(authenticate, requireRole('STUDENT'));
 fundingRouter.get('/me', async (req, res) => {
   res.json(await svc.studentFunding(req.user!));
 });
-fundingRouter.put('/me/visibility', validateBody(sponsorVisibilitySchema), async (req, res) => {
-  res.json(await svc.setVisibility(req.user!, req.body, req));
+fundingRouter.put('/me/note', validateBody(sponsorNoteSchema), async (req, res) => {
+  res.json(await svc.setNote(req.user!, req.body));
 });
 
 /** Administrators: see every connection and end one if needed. */

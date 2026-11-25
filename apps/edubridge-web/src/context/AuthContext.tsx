@@ -21,24 +21,36 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-// Non-sensitive hint that a refresh cookie may exist, so guests skip a pointless /refresh call.
+/*
+ * "Signed in" marker, kept in sessionStorage: it survives a page reload but is gone when the tab is closed.
+ * A tab opened without it does not restore the session, so closing the tab signs the user out.
+ */
 const SESSION_HINT = 'eb-has-session';
+/** Written to localStorage on sign-out so every other open tab signs out too. */
+const SIGNED_OUT = 'eb-signed-out';
 const hint = {
   get: () => {
     try {
-      return localStorage.getItem(SESSION_HINT) === '1';
+      return sessionStorage.getItem(SESSION_HINT) === '1';
     } catch {
-      return true;
+      return false;
     }
   },
   set: (on: boolean) => {
     try {
-      if (on) localStorage.setItem(SESSION_HINT, '1');
-      else localStorage.removeItem(SESSION_HINT);
+      if (on) sessionStorage.setItem(SESSION_HINT, '1');
+      else sessionStorage.removeItem(SESSION_HINT);
     } catch {
       /* storage unavailable */
     }
   },
+};
+const broadcastSignOut = () => {
+  try {
+    localStorage.setItem(SIGNED_OUT, String(Date.now()));
+  } catch {
+    /* storage unavailable */
+  }
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -53,6 +65,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
     });
     if (!hint.get()) {
+      // Older builds kept the marker in localStorage; drop it so it can't restore a session.
+      try {
+        localStorage.removeItem(SESSION_HINT);
+      } catch {
+        /* storage unavailable */
+      }
       setInitializing(false);
       return;
     }
@@ -76,8 +94,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Signing out in one tab signs out every other open tab.
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
-      if (e.key === SESSION_HINT && e.newValue === null) {
+      if (e.key === SIGNED_OUT && e.newValue) {
         setAccessToken(null);
+        hint.set(false);
         setUser(null);
       }
     };
@@ -114,6 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAccessToken(null);
       hint.set(false);
       clearActivity();
+      broadcastSignOut();
       setUser(null);
     }
   }, []);

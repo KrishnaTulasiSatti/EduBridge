@@ -1,4 +1,4 @@
-import { EyeOff, HeartHandshake } from 'lucide-react';
+import { HeartHandshake } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -6,11 +6,11 @@ import type { StudentFundingDTO } from '@edubridge/shared';
 import { EmptyState, PageHeader, Skeleton } from '@/components/dashboard/widgets';
 import { ContactCard, FundingBar, SponsorshipStatusBadge, sponsorshipStatusLine } from '@/components/sponsorship/parts';
 import { Alert } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardBody, CardHeader } from '@/components/ui/card';
-import { Checkbox, Field, Textarea } from '@/components/ui/input';
+import { Field, Textarea } from '@/components/ui/input';
 import { getErrorMessage } from '@/lib/api';
-import { formatDate } from '@/lib/student';
 import { fundingApi, useLoad } from '@/lib/sponsorship';
 import { cn, formatINR } from '@/lib/utils';
 
@@ -27,19 +27,16 @@ const ON_CONNECT = ['Your name', 'Your email address', 'Your phone number'];
 const NOT_SHARED = ['Your address and college name', 'Family income and documents', 'Your Aadhaar number'];
 
 function VisibilityCard({ funding, onChange }: { funding: StudentFundingDTO; onChange: (f: StudentFundingDTO) => void }) {
-  const [agree, setAgree] = useState(false);
   const [note, setNote] = useState(funding.noteToSponsors ?? '');
   const [busy, setBusy] = useState(false);
-  const [editing, setEditing] = useState(false);
   useEffect(() => setNote(funding.noteToSponsors ?? ''), [funding.noteToSponsors]);
+  const changed = note.trim() !== (funding.noteToSponsors ?? '');
 
-  const save = async (visible: boolean) => {
+  const save = async () => {
     setBusy(true);
     try {
-      onChange(await fundingApi.setVisibility({ visible, shareContact: visible, noteToSponsors: note }));
-      setEditing(false);
-      setAgree(false);
-      toast.success(visible ? 'Your profile is now shown to sponsors' : 'Your profile is hidden from sponsors');
+      onChange(await fundingApi.setNote({ noteToSponsors: note }));
+      toast.success('Your note has been saved');
     } catch (e) {
       toast.error(getErrorMessage(e));
     } finally {
@@ -47,48 +44,14 @@ function VisibilityCard({ funding, onChange }: { funding: StudentFundingDTO; onC
     }
   };
 
-  if (funding.visible && !editing) {
-    return (
-      <Card>
-        <CardHeader
-          title="Shown to sponsors"
-          description={`Since ${formatDate(funding.visibleSince)} as “${funding.alias}”`}
-          action={
-            <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
-              Edit
-            </Button>
-          }
-        />
-        <CardBody className="space-y-4">
-          {funding.noteToSponsors ? (
-            <div>
-              <p className="text-[13px] text-muted-foreground">Your note to sponsors</p>
-              <p className="mt-1 whitespace-pre-line text-sm">{funding.noteToSponsors}</p>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">You have not written a note to sponsors.</p>
-          )}
-          <Button variant="secondary" size="sm" loading={busy} onClick={() => save(false)}>
-            <EyeOff /> Hide my profile
-          </Button>
-          <p className="text-[13px] text-subtle">Hiding your profile stops new sponsors from finding you. Sponsors already connected keep your contact details.</p>
-        </CardBody>
-      </Card>
-    );
-  }
-
   return (
     <Card>
       <CardHeader
-        title={funding.visible ? 'Edit what sponsors see' : 'Show your profile to sponsors'}
-        description="Sponsors can only find you if you agree. You can hide your profile at any time."
+        title="Shown to sponsors"
+        description={funding.alias ? `Sponsors see your profile as “${funding.alias}”.` : undefined}
+        action={<Badge tone="success">Visible</Badge>}
       />
       <CardBody className="space-y-5">
-        {funding.needsNewConsent && (
-          <Alert tone="info" title="Please agree again">
-            Sponsorship now works by connecting you directly with sponsors, who will see your contact details. Your profile is hidden until you agree.
-          </Alert>
-        )}
         <div className="space-y-4">
           <div>
             <p className="text-sm font-medium">All sponsors will see</p>
@@ -118,24 +81,9 @@ function VisibilityCard({ funding, onChange }: { funding: StudentFundingDTO; onC
         <Field label="A note to sponsors" htmlFor="note" optional hint="What you are studying and what support would mean to you. Please do not include your name or contact details.">
           <Textarea id="note" value={note} onChange={(e) => setNote(e.target.value)} maxLength={600} />
         </Field>
-        {!funding.visible && (
-          <Checkbox
-            id="agree"
-            checked={agree}
-            onChange={(e) => setAgree(e.target.checked)}
-            label="I agree to show this profile to sponsors on EduBridge, and to share my name, email and phone number with sponsors who connect with me"
-          />
-        )}
-        <div className="flex gap-2">
-          <Button loading={busy} disabled={!funding.visible && !agree} onClick={() => save(true)}>
-            {funding.visible ? 'Save note' : 'Show my profile'}
-          </Button>
-          {editing && (
-            <Button variant="ghost" onClick={() => setEditing(false)}>
-              Cancel
-            </Button>
-          )}
-        </div>
+        <Button variant="secondary" loading={busy} disabled={!changed} onClick={save}>
+          Save note
+        </Button>
       </CardBody>
     </Card>
   );
@@ -158,7 +106,7 @@ export default function SponsorshipPage() {
             text={
               data.status === 'REJECTED'
                 ? 'Your application was not approved, so it cannot be matched with sponsors.'
-                : 'After an administrator approves your application, you can choose to show your profile to sponsors here.'
+                : 'After an administrator approves your application, your anonymised profile is shown to sponsors.'
             }
             action={
               <Link to="/dashboard/application" className={buttonVariants({ variant: 'secondary' })}>
@@ -203,7 +151,7 @@ export default function SponsorshipPage() {
               <EmptyState
                 icon={HeartHandshake}
                 title="No sponsors yet"
-                text={data.visible ? 'Sponsors whose preferences match will see your profile.' : 'Show your profile to sponsors so they can find you.'}
+                text="Sponsors whose preferences match will see your profile."
               />
             ) : (
               <ul className="divide-y divide-border">

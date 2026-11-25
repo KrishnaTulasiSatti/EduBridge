@@ -19,7 +19,7 @@ const STEPS = [
   { id: 'education', title: 'Education', description: 'Where and what you are currently studying.' },
   { id: 'family', title: 'Family and income', description: 'Your household and its annual income.' },
   { id: 'support', title: 'Support needed', description: 'Your education costs and the amount you are requesting.' },
-  { id: 'documents', title: 'Documents', description: 'Upload the three documents used to verify your application.' },
+  { id: 'documents', title: 'Documents', description: 'Upload the four documents used to verify your application.' },
   { id: 'review', title: 'Review and submit', description: 'Check your answers. You cannot edit the application after submitting.' },
 ] as const;
 type StepId = (typeof STEPS)[number]['id'];
@@ -133,7 +133,7 @@ export function ApplicationWizard({
                   type={t}
                   doc={application.documents.find((d) => d.type === t)}
                   editable
-                  defaultRollNumber={profile.education.rollNumber}
+                  tuitionFee={application.support.expenses?.tuition}
                   onChange={onApplication}
                 />
               ))}
@@ -283,4 +283,5 @@ const SECTION_DOC_LABEL: Record<string, string> = {
   MARKSHEET: 'Academic marksheet',
   INCOME_CERTIFICATE: 'Income certificate',
   COLLEGE_ID: 'College ID card',
+  FEE_RECEIPT: 'College fee receipt',
 };

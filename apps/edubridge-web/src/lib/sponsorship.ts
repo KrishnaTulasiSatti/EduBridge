@@ -9,7 +9,7 @@ import type {
   SponsorshipDTO,
   SponsorshipOverviewDTO,
   SponsorshipStatus,
-  SponsorVisibilityInput,
+  SponsorNoteInput,
   StudentFundingDTO,
 } from '@edubridge/shared';
 import { api, getErrorMessage } from './api';
@@ -59,8 +59,8 @@ export const fundingApi = {
   async me() {
     return (await api.get<StudentFundingDTO>('/funding/me')).data;
   },
-  async setVisibility(body: SponsorVisibilityInput) {
-    return (await api.put<StudentFundingDTO>('/funding/me/visibility', body)).data;
+  async setNote(body: SponsorNoteInput) {
+    return (await api.put<StudentFundingDTO>('/funding/me/note', body)).data;
   },
 };
 

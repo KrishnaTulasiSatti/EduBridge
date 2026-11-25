@@ -3,6 +3,7 @@ import cors from 'cors';
 import express from 'express';
 import morgan from 'morgan';
 import { env } from './config/env';
+import { keepServicesAwake } from './utils/wakeServices';
 import { errorHandler, notFoundHandler } from './middleware/error';
 import { apiLimiter, noStore, rejectOperatorInjection, requireHttps, securityHeaders } from './middleware/security';
 import { analyticsRouter } from './modules/analytics/analytics.routes';
@@ -30,6 +31,8 @@ export function createApp() {
   });
 
   app.use(requireHttps);
+  // Real use of EduBridge (not the host's health checks above) keeps EduVault, PAN and ML awake.
+  app.use('/api', keepServicesAwake);
   app.use('/api', apiLimiter, noStore);
   app.use(express.json({ limit: '1mb' }));
   app.use(cookieParser());

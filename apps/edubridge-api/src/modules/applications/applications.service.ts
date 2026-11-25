@@ -7,7 +7,8 @@ import {
   currentAcademicYear,
   normalizeAadhaar,
   DOCUMENT_TYPE_LABELS,
-  DOCUMENT_TYPES,
+  feeReceiptProblem,
+  requiredDocumentTypes,
   educationBase,
   educationSchema,
   familyBase,
@@ -95,6 +96,7 @@ export function toDocumentDTO(d: StudentDocumentDoc, forReviewer = false): Docum
     certificateNumber: d.certificateNumber ?? undefined,
     rollNumber: d.rollNumber ?? undefined,
     aadhaarLast4: d.aadhaarLast4 ?? undefined,
+    receiptAmount: d.receiptAmount ?? undefined,
     uploadedAt: d.createdAt.toISOString(),
     verification: d.source === 'EDUVAULT' && d.verification ? (d.verification as DocumentDTO['verification']) : undefined,
     review: forReviewer && d.review ? (d.review as DocumentReviewDTO) : undefined,
@@ -207,7 +209,6 @@ export async function updateDraft(userId: string, body: { family?: unknown; supp
   return { application: await toApplicationDTO(app), rejected };
 }
 
-const REQUIRED_DOCS: DocumentType[] = [...DOCUMENT_TYPES];
 
 export async function submit(userId: string, req: Request) {
   const app = await requireDraft(userId);
@@ -224,8 +225,12 @@ export async function submit(userId: string, req: Request) {
   check('support', supportSchema, plain(app.support));
 
   const docs = await StudentDocument.find({ application: app._id });
-  const missing = REQUIRED_DOCS.filter((t) => !docs.some((d) => d.type === t));
+  const missing = requiredDocumentTypes().filter((t) => !docs.some((d) => d.type === t));
   if (missing.length) problems.documents = missing.map((t) => `Upload your ${DOCUMENT_TYPE_LABELS[t].toLowerCase()}`);
+  // The tuition fee may have been changed after the receipt was uploaded.
+  const receipt = docs.find((d) => d.type === 'FEE_RECEIPT');
+  const receiptProblem = receipt && feeReceiptProblem(receipt.receiptAmount ?? undefined, app.support?.expenses?.tuition ?? undefined);
+  if (receiptProblem) (problems.documents ??= []).push(`Fee receipt: ${receiptProblem}`);
 
   if (Object.keys(problems).length) {
     throw AppError.badRequest('Some sections are incomplete. Please review them before submitting.', problems);
@@ -249,7 +254,7 @@ export async function submit(userId: string, req: Request) {
 export async function uploadDocument(
   userId: string,
   file: Express.Multer.File | undefined,
-  meta: { type: DocumentType; certificateNumber?: string; rollNumber?: string; aadhaarNumber?: string },
+  meta: { type: DocumentType; certificateNumber?: string; rollNumber?: string; aadhaarNumber?: string; receiptAmount?: number },
   req: Request,
 ) {
   const app = await requireDraft(userId);
@@ -272,6 +277,10 @@ export async function uploadDocument(
   if (meta.type === 'COLLEGE_ID' && !(meta.rollNumber && meta.rollNumber.length >= 3)) {
     throw AppError.badRequest('Enter the roll number shown on your college ID', { rollNumber: ['Enter your roll number'] });
   }
+  if (meta.type === 'FEE_RECEIPT') {
+    const problem = feeReceiptProblem(meta.receiptAmount, app.support?.expenses?.tuition ?? undefined);
+    if (problem) throw AppError.badRequest(problem, { receiptAmount: [problem] });
+  }
 
   const key = await storage.put(file.buffer);
   const previous = await StudentDocument.findOne({ application: app._id, type: meta.type }).select('+storageKey');
@@ -291,6 +300,7 @@ export async function uploadDocument(
         sha256: sha256(file.buffer),
         certificateNumber: meta.type === 'INCOME_CERTIFICATE' ? meta.certificateNumber : undefined,
         rollNumber: meta.type === 'COLLEGE_ID' ? meta.rollNumber : undefined,
+        receiptAmount: meta.type === 'FEE_RECEIPT' ? meta.receiptAmount : undefined,
         ...(aadhaar ? { aadhaarEncrypted: encryptField(aadhaar), aadhaarLast4: aadhaar.slice(-4) } : {}),
       },
       $unset: { verification: 1, review: 1, enrolmentCheck: 1 },
@@ -349,7 +359,9 @@ const listQuery = z.object({
 export async function listApplications(query: unknown) {
   const q = listQuery.parse(query);
   const match: Plain = { status: { $ne: 'DRAFT' } };
-  if (q.status && q.status !== 'ALL') match.status = q.status;
+  // "Approved" also covers approved applications that sponsors have since supported.
+  if (q.status === 'APPROVED') match.status = { $in: ['APPROVED', 'PARTIALLY_FUNDED', 'FULLY_FUNDED'] };
+  else if (q.status && q.status !== 'ALL') match.status = q.status;
 
   const pipeline: PipelineStage[] = [
     { $match: match },

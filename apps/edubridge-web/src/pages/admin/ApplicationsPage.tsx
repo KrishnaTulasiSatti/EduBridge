@@ -23,7 +23,6 @@ export default function ApplicationsPage() {
     <>
       <PageHeader
         title="Applications"
-        description="Submitted applications, newest first. Open one to see its documents and verification. Eligibility decisions arrive with the review module."
       />
       <Card className="overflow-hidden">
         <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center">

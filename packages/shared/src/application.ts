@@ -84,13 +84,34 @@ export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
   FULLY_FUNDED: 'Fully supported',
 };
 
-export const DOCUMENT_TYPES = ['MARKSHEET', 'INCOME_CERTIFICATE', 'COLLEGE_ID'] as const;
+export const DOCUMENT_TYPES = ['MARKSHEET', 'INCOME_CERTIFICATE', 'COLLEGE_ID', 'FEE_RECEIPT'] as const;
 export type DocumentType = (typeof DOCUMENT_TYPES)[number];
 export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   MARKSHEET: 'Latest academic marksheet',
   INCOME_CERTIFICATE: 'Income certificate',
   COLLEGE_ID: 'College ID card',
+  FEE_RECEIPT: 'College fee receipt',
 };
+
+/** Applications submitted before this date did not have to include a fee receipt. */
+export const FEE_RECEIPT_REQUIRED_FROM = new Date('2026-11-25T00:00:00+05:30');
+
+/** Documents an application must include, given when it was submitted (undefined = not yet submitted). */
+export function requiredDocumentTypes(submittedAt?: string | Date | null): DocumentType[] {
+  if (submittedAt && new Date(submittedAt) < FEE_RECEIPT_REQUIRED_FROM) return DOCUMENT_TYPES.filter((t) => t !== 'FEE_RECEIPT');
+  return [...DOCUMENT_TYPES];
+}
+
+/** The amount on the fee receipt must equal the tuition fee entered under "Support needed". */
+export function feeReceiptProblem(receiptAmount: number | undefined, tuition: number | undefined): string | undefined {
+  if (receiptAmount === undefined || !Number.isFinite(receiptAmount) || receiptAmount <= 0) return 'Enter the amount shown on the receipt';
+  if (tuition === undefined || tuition === null || tuition <= 0) return 'Enter your tuition fee under “Support needed” first';
+  if (receiptAmount !== tuition) {
+    const inr = (n: number) => `₹${n.toLocaleString('en-IN')}`;
+    return `The receipt amount (${inr(receiptAmount)}) does not match the tuition fee you entered (${inr(tuition)})`;
+  }
+  return undefined;
+}
 
 export const DOCUMENT_STATUSES = [
   'PENDING',
@@ -224,6 +245,8 @@ export const documentMetaSchema = z.object({
   rollNumber: z.string().trim().max(30).optional(),
   /** Income certificate only: used by reviewers to find the certificate on the AP Seva portal. */
   aadhaarNumber: z.string().trim().max(20).optional(),
+  /** Fee receipt only: the amount printed on the receipt, in whole rupees. */
+  receiptAmount: z.coerce.number().int('Use whole rupees').min(1).max(MAX_AMOUNT).optional(),
 });
 
 export const submitSchema = z.object({
@@ -296,6 +319,8 @@ export interface DocumentDTO {
   rollNumber?: string;
   /** Last 4 digits only. The full number is stored encrypted and shown only to the assigned reviewer. */
   aadhaarLast4?: string;
+  /** Fee receipt: the amount the student entered from the receipt. */
+  receiptAmount?: number;
   uploadedAt: string;
   verification?: DocumentVerificationDTO;
   /** Latest manual check by a volunteer or administrator. */

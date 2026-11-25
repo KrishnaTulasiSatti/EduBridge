@@ -68,18 +68,11 @@ export interface SponsorProfileDTO extends SponsorPreferences {
 
 /* ----------------------------------------------------- Student consent */
 
-export const sponsorVisibilitySchema = z
-  .object({
-    visible: z.boolean(),
-    /** Showing the profile means a sponsor who connects sees the student's name, email and mobile number. */
-    shareContact: z.boolean().optional(),
-    noteToSponsors: z.string().trim().max(600, 'At most 600 characters').optional().or(z.literal('')),
-  })
-  .refine((v) => !v.visible || v.shareContact === true, {
-    message: 'Agree to share your contact details with sponsors who connect with you',
-    path: ['shareContact'],
-  });
-export type SponsorVisibilityInput = z.infer<typeof sponsorVisibilitySchema>;
+/** Approved students are shown to sponsors automatically; they can add an optional note to their profile. */
+export const sponsorNoteSchema = z.object({
+  noteToSponsors: z.string().trim().max(600, 'At most 600 characters').optional().or(z.literal('')),
+});
+export type SponsorNoteInput = z.infer<typeof sponsorNoteSchema>;
 
 /* ----------------------------------------------------------- Connect */
 
@@ -238,6 +231,8 @@ export interface SponsorStudentCardDTO {
   remaining: number;
   noteToSponsors?: string;
   verifiedDocuments: number;
+  /** Documents this application had to include (older applications did not need a fee receipt). */
+  totalDocuments: number;
   approvedAt: string;
   match: MatchResult;
   /** The current sponsor's active connection with this student, if any. */
@@ -272,10 +267,8 @@ export interface StudentFundingDTO {
   approvedAmount: number;
   promised: number;
   remaining: number;
+  /** Shown to sponsors: true for every approved student who still needs support. */
   visible: boolean;
-  visibleSince?: string;
-  /** The student showed their profile under the old (anonymous) terms and must agree again to share contact details. */
-  needsNewConsent?: boolean;
   noteToSponsors?: string;
   alias?: string;
   sponsorships: SponsorshipDTO[];

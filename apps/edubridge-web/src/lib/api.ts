@@ -12,7 +12,14 @@ export const setAccessToken = (t: string | null) => {
   accessToken = t;
 };
 
-// Every request shows the loading bar at the top of the window until it finishes.
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    /** Skip the top loading bar (used by background saves while the student types). */
+    silent?: boolean;
+  }
+}
+
+// Every request shows the loading bar at the top of the window until it finishes, unless it is silent.
 type Tracked = InternalAxiosRequestConfig & { _endActivity?: () => void };
 const endActivity = (config: unknown) => {
   const c = config as Tracked | undefined;
@@ -22,7 +29,7 @@ const endActivity = (config: unknown) => {
 
 api.interceptors.request.use((config) => {
   if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`;
-  (config as Tracked)._endActivity = beginActivity();
+  if (!config.silent) (config as Tracked)._endActivity = beginActivity();
   return config;
 });
 

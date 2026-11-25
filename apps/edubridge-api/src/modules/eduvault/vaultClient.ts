@@ -7,6 +7,7 @@ import type {
   RedeemResponse,
 } from '@eduvault/shared';
 import { env } from '../../config/env';
+import { SERVICE_TIMEOUT_MS } from '../../utils/wakeServices';
 import { AppError } from '../../utils/AppError';
 
 /**
@@ -24,7 +25,7 @@ export class VaultError extends Error {
 }
 
 const unavailable = () =>
-  new AppError(503, 'EDUVAULT_UNAVAILABLE', 'EduVault is not reachable right now. Please try again in a few minutes, or upload a copy instead.');
+  new AppError(503, 'EDUVAULT_UNAVAILABLE', 'We could not connect to EduVault. Please try again in a minute, or upload a scanned copy instead.');
 
 async function call<T>(path: string, init: RequestInit & { partner?: boolean } = {}): Promise<T> {
   if (init.partner && !env.EDUVAULT_CLIENT_SECRET) {
@@ -37,7 +38,7 @@ async function call<T>(path: string, init: RequestInit & { partner?: boolean } =
   }
   let res: Response;
   try {
-    res = await fetch(`${env.EDUVAULT_API_URL}${path}`, { ...init, headers, signal: AbortSignal.timeout(10_000) });
+    res = await fetch(`${env.EDUVAULT_API_URL}${path}`, { ...init, headers, signal: AbortSignal.timeout(SERVICE_TIMEOUT_MS) });
   } catch {
     throw unavailable();
   }

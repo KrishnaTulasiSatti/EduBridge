@@ -13,11 +13,10 @@ export const registerSchema = z.object({
   fullName: z.string().trim().min(2, 'Enter your full name').max(80),
   email: z.string().trim().toLowerCase().email('Enter a valid email'),
   phone: z
-    .string()
+    .string({ error: 'Enter your mobile number' })
     .trim()
-    .regex(/^[6-9]\d{9}$/, 'Enter a valid 10-digit Indian mobile number')
-    .optional()
-    .or(z.literal('').transform(() => undefined)),
+    .min(1, 'Enter your mobile number')
+    .regex(/^[6-9]\d{9}$/, 'Enter a valid 10-digit Indian mobile number'),
   password: passwordSchema,
   role: z.enum(SELF_REGISTER_ROLES),
   acceptTerms: z.literal(true, { error: 'You must accept the terms and privacy policy' }),

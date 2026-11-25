@@ -145,9 +145,12 @@ const applicationSchema = new Schema(
       type: new Schema({ promised: { type: Number, default: 0 } }, { _id: false }),
       default: undefined,
     },
-    /** The student's consent to show their anonymised profile to sponsors once approved, and to share contact details with sponsors who connect. */
+    /**
+     * The student's optional note to sponsors. Approved students are listed automatically now;
+     * `visible`, `shareContact` and `at` are kept only because older records have them.
+     */
     sponsorVisibility: {
-      type: new Schema({ visible: { type: Boolean, required: true }, shareContact: Boolean, at: { type: Date, required: true }, noteToSponsors: String }, { _id: false }),
+      type: new Schema({ visible: Boolean, shareContact: Boolean, at: Date, noteToSponsors: String }, { _id: false }),
       default: undefined,
     },
     /** Preliminary recommendation handed to the administrator. */
@@ -196,6 +199,8 @@ const documentSchema = new Schema(
     /** Income certificate: the student's Aadhaar, AES-256-GCM encrypted, for looking it up on AP Seva. Never selected by default. */
     aadhaarEncrypted: { type: String, select: false },
     aadhaarLast4: String,
+    /** Fee receipt: the amount the student read from the receipt. Must equal the tuition fee in the application. */
+    receiptAmount: Number,
     /** Latest manual check by a volunteer or admin (DocumentReviewDTO). Earlier checks remain in the audit log. */
     review: { type: Schema.Types.Mixed },
     /** College ID: automatic enrolment check against EduVault (EnrolmentCheckDTO). */

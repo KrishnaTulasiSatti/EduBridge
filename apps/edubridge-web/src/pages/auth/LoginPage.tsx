@@ -1,5 +1,4 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -17,7 +16,6 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from;
-  const [formError, setFormError] = useState<string | null>(null);
 
   const {
     register,
@@ -26,12 +24,11 @@ export default function LoginPage() {
   } = useForm<LoginInput>({ resolver: zodResolver(loginSchema) });
 
   const onSubmit = async (values: LoginInput) => {
-    setFormError(null);
     try {
       await login(values);
       navigate(from ?? '/dashboard', { replace: true });
     } catch (err) {
-      setFormError(getErrorMessage(err));
+      toast.error(getErrorMessage(err));
     }
   };
 
@@ -41,8 +38,7 @@ export default function LoginPage() {
       <p className="mt-2 text-muted-foreground">Welcome back to EduBridge.</p>
 
       <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-5" noValidate>
-        {formError && <Alert tone="danger">{formError}</Alert>}
-        {!formError && idleSignedOut && (
+        {idleSignedOut && (
           <Alert tone="info">You were signed out because there was no activity for {IDLE_MINUTES} minutes. Please sign in again.</Alert>
         )}
         <Field label="Email" htmlFor="email" error={errors.email?.message}>

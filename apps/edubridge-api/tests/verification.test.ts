@@ -53,6 +53,7 @@ async function submitApplication() {
     ['INCOME_CERTIFICATE', { certificateNumber: 'IC2026-0012345', aadhaarNumber: '2345 6789 0124' }],
     // Different from the roll number in the profile: should be flagged.
     ['COLLEGE_ID', { rollNumber: '21TEST0043' }],
+    ['FEE_RECEIPT', { receiptAmount: '65000' }],
   ];
   for (const [type, extra] of uploads) {
     const r = request(app).post('/api/applications/current/documents').set('Authorization', student).field('type', type);
@@ -245,8 +246,8 @@ describe('volunteer verification workflow', () => {
       .set('Authorization', volunteer)
       .send({ recommendation: 'NEEDS_ADMIN_ATTENTION', summary: 'Income on the certificate is higher than declared in the application.' });
     expect(early.status).toBe(400);
-    // College ID already has a result (from the enrolment check); only the marksheet is left.
-    expect(early.body.error.details.documents).toHaveLength(1);
+    // College ID already has a result (from the enrolment check); the marksheet and fee receipt are left.
+    expect(early.body.error.details.documents).toHaveLength(2);
 
     // The college adds the student on EduVault; checking again now finds a matching record.
     enrolmentSpy.mockResolvedValueOnce({
@@ -275,6 +276,26 @@ describe('volunteer verification workflow', () => {
           .send({ type: 'MARKSHEET', outcome: 'VERIFIED', note: 'Marksheet matches the details given.', nameOnDocument: 'Rahul Kumar', percentage: 81.5 })
       ).status,
     ).toBe(200);
+  });
+
+  it('checks the fee receipt amount against the tuition fee', async () => {
+    const needsEvidence = await request(app)
+      .post(`/api/verification/applications/${appId}/documents/${docIds.FEE_RECEIPT}/review`)
+      .set('Authorization', volunteer)
+      .send({ type: 'FEE_RECEIPT', outcome: 'VERIFIED', note: 'Receipt looks fine.' });
+    expect(needsEvidence.status).toBe(400);
+    expect(needsEvidence.body.error.details.amountOnReceipt).toBeDefined();
+
+    const res = await request(app)
+      .post(`/api/verification/applications/${appId}/documents/${docIds.FEE_RECEIPT}/review`)
+      .set('Authorization', volunteer)
+      .send({ type: 'FEE_RECEIPT', outcome: 'VERIFIED', note: 'Receipt is genuine.', nameOnReceipt: 'Rahul Kumar', amountOnReceipt: 65000 });
+    expect(res.status).toBe(200);
+    const receipt = res.body.application.documents.find((d: { type: string }) => d.type === 'FEE_RECEIPT');
+    expect(receipt.status).toBe('VERIFIED');
+    expect(receipt.review.checks).toEqual(
+      expect.arrayContaining([expect.objectContaining({ field: 'Amount on receipt', match: true }), expect.objectContaining({ field: 'Name on receipt', match: true })]),
+    );
   });
 
   it('blocks people who have not claimed the application', async () => {

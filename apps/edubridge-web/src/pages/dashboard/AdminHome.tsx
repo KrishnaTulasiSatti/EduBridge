@@ -55,7 +55,7 @@ export default function AdminHome() {
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader title="Volunteer approvals" description="Volunteers can see student documents, so each account is approved manually." />
+          <CardHeader title="Volunteer approvals" />
           <CardBody className="py-2">
             {pending.loading && !pending.data ? (
               <Skeleton className="my-3 h-12" />

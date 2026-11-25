@@ -181,11 +181,11 @@ export default function ModelPage() {
     <>
       <PageHeader
         title="Need model"
-        description="An experimental machine-learning second opinion. The rule-based score stays primary and the admin always decides."
       />
       {data.service === 'DOWN' && (
-        <Alert tone="warning" title="The ML service is not running" className="mb-6">
-          Start it with <code className="font-mono text-[13px]">npm run dev</code>. Assessments still work using the rule-based score alone.
+        <Alert tone="warning" title="The ML service could not be reached" className="mb-6">
+          If it is hosted on a free plan it may be waking up, so refresh this page in a minute. Assessments still work using the
+          rule-based score alone.
         </Alert>
       )}
 

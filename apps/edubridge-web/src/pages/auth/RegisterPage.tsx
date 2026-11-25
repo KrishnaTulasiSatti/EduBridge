@@ -1,21 +1,23 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { GraduationCap, HeartHandshake, ShieldCheck, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import { registerSchema, SELF_REGISTER_ROLES, type RegisterInput, type SelfRegisterRole } from '@edubridge/shared';
 import { SponsorPanCheck, type VerifiedPan } from '@/components/auth/SponsorPanCheck';
-import { Alert } from '@/components/ui/alert';
+import { TermsAgreement } from '@/components/auth/TermsAgreement';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { Checkbox, Field, Input } from '@/components/ui/input';
+import { Field, Input } from '@/components/ui/input';
 import { useAuth } from '@/context/AuthContext';
 import { getErrorMessage, getFieldErrors } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { AuthLayout } from './AuthLayout';
 
-const roleOptions: Record<SelfRegisterRole, { title: string; text: string }> = {
-  STUDENT: { title: 'Student', text: 'I need support for my education' },
-  SPONSOR: { title: 'Sponsor', text: 'I want to support a student' },
-  VOLUNTEER: { title: 'Volunteer', text: 'I want to help verify applications' },
+const roleOptions: Record<SelfRegisterRole, { title: string; text: string; icon: LucideIcon }> = {
+  STUDENT: { title: 'Student', text: 'Apply for support', icon: GraduationCap },
+  SPONSOR: { title: 'Sponsor', text: 'Support a student', icon: HeartHandshake },
+  VOLUNTEER: { title: 'Volunteer', text: 'Verify applications', icon: ShieldCheck },
 };
 
 const asides: Record<SelfRegisterRole, { title: string; text: string }> = {
@@ -47,7 +49,6 @@ export default function RegisterPage() {
   const initialRole = (SELF_REGISTER_ROLES as readonly string[]).includes(params.get('role') ?? '')
     ? (params.get('role') as SelfRegisterRole)
     : 'STUDENT';
-  const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [verifiedPan, setVerifiedPan] = useState<VerifiedPan | null>(null);
   const [panError, setPanError] = useState<string | undefined>();
@@ -59,7 +60,7 @@ export default function RegisterPage() {
     setValue,
     setError,
     clearErrors,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isSubmitted },
   } = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
     defaultValues: { role: initialRole, fullName: '', email: '', phone: '', password: '' },
@@ -68,10 +69,10 @@ export default function RegisterPage() {
   const role = watch('role');
   const password = watch('password') ?? '';
   const fullName = watch('fullName') ?? '';
+  const acceptTerms = watch('acceptTerms');
   const isSponsor = role === 'SPONSOR';
 
   const onSubmit = async (values: RegisterInput) => {
-    setFormError(null);
     setPanError(undefined);
     if (isSponsor && !verifiedPan) {
       setPanError('Verify your PAN before creating your account.');
@@ -93,7 +94,7 @@ export default function RegisterPage() {
         return;
       }
       if (fields) Object.entries(fields).forEach(([k, v]) => setError(k as keyof RegisterInput, { message: v[0] }));
-      setFormError(getErrorMessage(err));
+      else toast.error(getErrorMessage(err));
     }
   };
 
@@ -102,8 +103,7 @@ export default function RegisterPage() {
       <AuthLayout aside={asides.VOLUNTEER}>
         <h1 className="font-display text-[32px] font-medium">Thank you for volunteering</h1>
         <p className="mt-4 leading-relaxed text-muted-foreground">
-          Volunteers handle sensitive student documents, so an administrator reviews every volunteer account before it is
-          activated. You will be able to sign in once your account is approved.
+          You will be able to sign in once an administrator approves your account.
         </p>
         <Link to="/" className={cn(buttonVariants({ variant: 'secondary' }), 'mt-8')}>
           Return to the home page
@@ -114,37 +114,28 @@ export default function RegisterPage() {
 
   return (
     <AuthLayout aside={asides[role]}>
-      <h1 className="font-display text-[32px] font-medium">Create your account</h1>
-      <p className="mt-2 text-muted-foreground">Choose how you would like to take part.</p>
+      <h1 className="font-display text-[28px] font-medium leading-tight">Create your account</h1>
+      <p className="mt-1 text-[15px] text-muted-foreground">Choose how you would like to take part.</p>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-5" noValidate>
-        {formError && <Alert tone="danger">{formError}</Alert>}
-
+      <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4" noValidate>
         <fieldset>
           <legend className="sr-only">I am joining as</legend>
-          <div className="space-y-2">
+          <div className="grid grid-cols-3 gap-2">
             {SELF_REGISTER_ROLES.map((r) => {
               const active = role === r;
+              const Icon = roleOptions[r].icon;
               return (
                 <label
                   key={r}
                   className={cn(
-                    'flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors',
-                    active ? 'border-primary bg-primary-soft/60' : 'border-border-strong bg-surface hover:border-subtle',
+                    'relative flex cursor-pointer flex-col items-start gap-1 rounded-lg border px-3 py-2.5 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring',
+                    active ? 'border-primary bg-primary-soft/70' : 'border-border-strong bg-surface hover:border-subtle',
                   )}
                 >
-                  <input
-                    type="radio"
-                    name="role"
-                    value={r}
-                    checked={active}
-                    onChange={() => setValue('role', r)}
-                    className="size-4 cursor-pointer accent-[var(--primary)]"
-                  />
-                  <span>
-                    <span className="block text-sm font-medium">{roleOptions[r].title}</span>
-                    <span className="block text-[13px] text-muted-foreground">{roleOptions[r].text}</span>
-                  </span>
+                  <input type="radio" name="role" value={r} checked={active} onChange={() => setValue('role', r)} className="sr-only" />
+                  <Icon className={cn('size-4', active ? 'text-primary-ink' : 'text-subtle')} />
+                  <span className="text-sm font-medium">{roleOptions[r].title}</span>
+                  <span className="text-[12px] leading-snug text-muted-foreground">{roleOptions[r].text}</span>
                 </label>
               );
             })}
@@ -155,15 +146,9 @@ export default function RegisterPage() {
           label="Full name"
           htmlFor="fullName"
           error={errors.fullName?.message}
-          hint={role === 'STUDENT' ? 'As it appears on your college ID' : isSponsor ? 'As printed on your PAN card' : undefined}
+          hint={isSponsor && !verifiedPan ? 'As printed on your PAN card' : undefined}
         >
-          <Input
-            id="fullName"
-            autoComplete="name"
-            invalid={!!errors.fullName}
-            readOnly={isSponsor && !!verifiedPan}
-            {...register('fullName')}
-          />
+          <Input id="fullName" autoComplete="name" invalid={!!errors.fullName} readOnly={isSponsor && !!verifiedPan} {...register('fullName')} />
         </Field>
 
         {isSponsor && (
@@ -173,24 +158,38 @@ export default function RegisterPage() {
             error={panError}
             onVerified={(v) => {
               setVerifiedPan(v);
+              setValue('fullName', v.fullName);
               setPanError(undefined);
               clearErrors('fullName');
             }}
             onReset={() => setVerifiedPan(null)}
-            onNameError={(message) => setError('fullName', { message })}
+            onNameChange={(name) => setValue('fullName', name)}
           />
         )}
-        <Field label="Email" htmlFor="email" error={errors.email?.message}>
-          <Input id="email" type="email" autoComplete="email" invalid={!!errors.email} {...register('email')} />
-        </Field>
-        <Field label="Mobile number" htmlFor="phone" optional error={errors.phone?.message}>
-          <Input id="phone" type="tel" inputMode="numeric" autoComplete="tel-national" maxLength={10} prefix="+91" invalid={!!errors.phone} {...register('phone')} />
-        </Field>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Email" htmlFor="email" error={errors.email?.message}>
+            <Input id="email" type="email" autoComplete="email" invalid={!!errors.email} {...register('email')} />
+          </Field>
+          <Field label="Mobile number" htmlFor="phone" error={errors.phone?.message}>
+            <Input
+              id="phone"
+              type="tel"
+              inputMode="numeric"
+              autoComplete="tel-national"
+              maxLength={10}
+              prefix="+91"
+              invalid={!!errors.phone}
+              {...register('phone')}
+            />
+          </Field>
+        </div>
+
         <Field label="Password" htmlFor="password" error={errors.password?.message}>
           <Input id="password" type="password" autoComplete="new-password" invalid={!!errors.password} {...register('password')} />
-          <ul className="grid grid-cols-2 gap-x-4 gap-y-1 pt-1">
+          <ul className="flex flex-wrap gap-x-3 gap-y-1 pt-0.5">
             {rules.map((r) => (
-              <li key={r.label} className={cn('flex items-center gap-1.5 text-[13px]', r.test(password) ? 'text-success' : 'text-subtle')}>
+              <li key={r.label} className={cn('flex items-center gap-1.5 text-[12px]', r.test(password) ? 'text-success' : 'text-subtle')}>
                 <span className={cn('size-1.5 rounded-full', r.test(password) ? 'bg-success' : 'bg-border-strong')} />
                 {r.label}
               </li>
@@ -198,21 +197,18 @@ export default function RegisterPage() {
           </ul>
         </Field>
 
-        <div>
-          <Checkbox
-            id="acceptTerms"
-            {...register('acceptTerms')}
-            label="I agree to the terms of use and privacy policy, and consent to EduBridge processing my information to verify and assess applications."
-          />
-          {errors.acceptTerms && <p className="mt-1.5 pl-7 text-[13px] text-danger">{errors.acceptTerms.message}</p>}
-        </div>
+        <TermsAgreement
+          checked={acceptTerms === true}
+          onChange={(v) => setValue('acceptTerms', v as true, { shouldValidate: isSubmitted })}
+          error={errors.acceptTerms?.message}
+        />
 
         <Button type="submit" size="lg" className="w-full" loading={isSubmitting}>
           Create account
         </Button>
       </form>
 
-      <p className="mt-8 text-sm text-muted-foreground">
+      <p className="mt-5 text-sm text-muted-foreground">
         Already have an account?{' '}
         <Link to="/login" className="font-medium text-primary-ink hover:underline">
           Sign in

@@ -1,4 +1,4 @@
-import { ArrowRight, Check, FileCheck2, Lock, ScrollText, UserRoundCheck } from 'lucide-react';
+import { ArrowRight, Check, FileCheck2, HandHeart, Lock, ScrollText, UserRoundCheck } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Logo } from '@/components/brand/Logo';
@@ -28,7 +28,7 @@ function Heading({ eyebrow, title, text, className }: { eyebrow?: string; title:
 
 const steps = [
   { title: 'Apply', text: 'Students fill in one structured application covering their studies, family and finances.' },
-  { title: 'Submit documents', text: 'A marksheet, an income certificate and a college ID card, each checked by the most reliable method available.' },
+  { title: 'Submit documents', text: 'A marksheet, an income certificate, a college ID card and a fee receipt, each checked by the most reliable method available.' },
   { title: 'Volunteer review', text: 'A trained volunteer compares the documents with the application and notes anything that does not match.' },
   { title: 'Need assessment', text: 'A transparent scoring model estimates financial need and shows the factors behind the estimate.' },
   { title: 'Administrator decision', text: 'An administrator looks at everything together and decides on eligibility, recording the reason.' },
@@ -51,6 +51,11 @@ const verification = [
     how: 'Current enrolment confirmed with the institution.',
     who: 'Volunteer, confirmed by an administrator',
   },
+  {
+    doc: 'College fee receipt',
+    how: 'Receipt amount matched with the tuition fee in the application.',
+    who: 'Automatic amount check, then a volunteer',
+  },
 ];
 
 const principles = [
@@ -62,7 +67,7 @@ const principles = [
   {
     icon: Lock,
     title: 'Private by default',
-    text: 'Sponsors see an anonymised profile. Only a sponsor who connects with a student sees their name and contact details, and only if the student agreed. Documents are never shown.',
+    text: 'Sponsors see an anonymised profile. Only a sponsor who connects with a student sees their name and contact details. Documents are never shown.',
   },
   {
     icon: FileCheck2,
@@ -85,13 +90,10 @@ const faqs = [
     q: 'Who can apply?',
     a: 'Students enrolled in a diploma, undergraduate, postgraduate or doctoral programme who need financial support to continue their studies.',
   },
-  {
-    q: 'Is Aadhaar mandatory?',
-    a: 'No. Aadhaar is optional. Identity and enrolment can be confirmed through other documents and through your institution.',
-  },
+
   {
     q: 'What can sponsors see about me?',
-    a: 'Sponsors see your course, year, state, the kind of support you need and how much of it is still unfunded. They do not see your name or contact details unless they connect with you, and you choose whether to allow that. They never see your documents.',
+    a: 'Sponsors see your course, year, state, the kind of support you need and how much of it is still unfunded. They see your name and contact details only after they connect with you. They never see your documents.',
   },
   {
     q: 'How is financial need assessed?',
@@ -112,13 +114,13 @@ export default function LandingPage() {
         <section className="px-5 pb-16 pt-14 sm:px-8 lg:pb-24 lg:pt-20">
           <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
             <div className="stagger">
-              <p className="text-sm font-medium text-primary-ink">Educational sponsorship, handled with care</p>
+              <p className="text-sm font-medium text-primary-ink">Where verified need meets willing support</p>
               <h1 className="mt-4 font-display text-[36px] font-medium leading-[1.08] text-balance min-[400px]:text-[42px] sm:text-[54px] lg:text-[60px]">
                 Helping deserving students continue their education.
               </h1>
               <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground text-pretty">
                 EduBridge connects students facing financial hardship with people who want to help. Every application is verified,
-                reviewed by people, and every contribution is recorded.
+                and every contribution is recorded.
               </p>
               <div className="mt-9 flex flex-col gap-3 sm:flex-row">
                 <Link to="/register?role=STUDENT" className={buttonVariants({ size: 'lg' })}>
@@ -128,7 +130,7 @@ export default function LandingPage() {
                   Become a sponsor
                 </Link>
               </div>
-              <p className="mt-5 text-sm text-subtle">Free for students. Aadhaar is optional.</p>
+              <p className="mt-5 text-sm text-subtle">Free for students.</p>
             </div>
             <div className="hidden sm:block">
               <BridgeArt className="mx-auto w-full max-w-[480px]" />
@@ -182,7 +184,7 @@ export default function LandingPage() {
               </p>
               <p className="mt-7 text-sm font-semibold">Keep these ready</p>
               <ul className="mt-3 space-y-2.5">
-                {['Your latest marksheet', 'Income certificate and its certificate number', 'College ID card and your roll number'].map((t) => (
+                {['Your latest marksheet', 'Income certificate and its certificate number', 'College ID card and your roll number', 'Your latest college fee receipt'].map((t) => (
                   <li key={t} className="flex gap-2.5 text-[15px] text-muted-foreground">
                     <Check className="mt-1 size-4 shrink-0 text-primary" /> {t}
                   </li>
@@ -217,12 +219,22 @@ export default function LandingPage() {
               </Link>
             </Reveal>
           </div>
-          <p className="mx-auto mt-8 max-w-6xl text-[15px] text-muted-foreground">
-            Want to help verify applications?{' '}
-            <Link to="/register?role=VOLUNTEER" className="group inline-flex items-center gap-1 font-medium text-primary-ink hover:underline">
-              Volunteer with EduBridge <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+          <Reveal className="mx-auto mt-6 flex max-w-6xl flex-col gap-5 rounded-2xl border border-primary/25 bg-primary-soft px-6 py-6 min-[400px]:px-8 sm:flex-row sm:items-center sm:justify-between sm:px-10">
+            <div className="flex items-start gap-4">
+              <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground">
+                <HandHeart className="size-5" />
+              </span>
+              <div>
+                <p className="font-display text-[22px] font-medium leading-tight">Want to help verify applications?</p>
+                <p className="mt-1 text-[15px] leading-relaxed text-muted-foreground">
+                  Volunteers check student documents so that sponsors can give with confidence.
+                </p>
+              </div>
+            </div>
+            <Link to="/register?role=VOLUNTEER" className={cn(buttonVariants(), 'group shrink-0')}>
+              Volunteer with EduBridge <ArrowRight className="transition-transform duration-200 group-hover:translate-x-0.5" />
             </Link>
-          </p>
+          </Reveal>
         </section>
 
         {/* Verification */}
@@ -255,8 +267,7 @@ export default function LandingPage() {
             </table>
           </Reveal>
           <p className="mt-6 max-w-3xl text-[15px] leading-relaxed text-muted-foreground">
-            If an official service is temporarily unavailable, the document waits for a person to review it. A document is never
-            rejected automatically because a website was down.
+            Every check is recorded with who made it and when, so a decision can always be traced back to the documents behind it.
           </p>
         </Section>
 
@@ -343,13 +354,13 @@ export default function LandingPage() {
             <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
               <li><a href="#verification" className="hover:text-foreground">Verification</a></li>
               <li><a href="#faq" className="hover:text-foreground">FAQ</a></li>
+              <li><Link to="/terms" className="hover:text-foreground">Terms and privacy</Link></li>
               <li><Link to="/login" className="hover:text-foreground">Sign in</Link></li>
             </ul>
           </div>
         </div>
-        <div className="mx-auto flex max-w-6xl flex-col gap-2 border-t border-border py-6 text-[13px] text-subtle sm:flex-row sm:justify-between">
-          <p>© {new Date().getFullYear()} EduBridge</p>
-          <p>EduVault is a simulated document service and is not affiliated with DigiLocker.</p>
+        <div className="mx-auto max-w-6xl border-t border-border py-6 text-center text-[13px] text-subtle">
+          <p>© {new Date().getFullYear()} EduBridge. All rights reserved.</p>
         </div>
       </footer>
     </div>

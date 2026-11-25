@@ -7,8 +7,6 @@ const fromEnv = Number(import.meta.env.VITE_SESSION_IDLE_MINUTES);
 /** Minutes without activity before the user is signed out. */
 export const IDLE_MINUTES = Number.isFinite(fromEnv) && fromEnv > 0 ? fromEnv : 30;
 export const IDLE_MS = IDLE_MINUTES * 60 * 1000;
-/** How long before sign-out the warning appears. */
-export const WARNING_MS = Math.min(60 * 1000, IDLE_MS / 2);
 
 const LAST_ACTIVITY = 'eb-last-activity';
 

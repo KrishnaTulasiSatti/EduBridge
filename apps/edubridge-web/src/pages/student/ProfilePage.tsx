@@ -42,7 +42,7 @@ export default function ProfilePage() {
 
   return (
     <>
-      <PageHeader title="Profile" description="Details you enter here are used to fill in your application." />
+      <PageHeader title="Profile" />
       <div className="space-y-6">
         {application && application.status !== 'DRAFT' && (
           <Alert tone="info">

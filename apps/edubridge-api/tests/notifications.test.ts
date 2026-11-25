@@ -23,7 +23,7 @@ beforeEach(() => {
 
 describe('email notifications', () => {
   it('welcomes a new student with a link to the application', async () => {
-    const res = await request(app).post('/api/auth/register').send({ fullName: 'Asha Devi', email: 'asha@example.com', password: 'Strong@123', role: 'STUDENT', acceptTerms: true });
+    const res = await request(app).post('/api/auth/register').send({ fullName: 'Asha Devi', email: 'asha@example.com', password: 'Strong@123', role: 'STUDENT', acceptTerms: true, phone: '9876543210' });
     expect(res.status).toBe(201);
     await flushMail();
     const [mail] = sentTo('asha@example.com');
@@ -33,7 +33,7 @@ describe('email notifications', () => {
   });
 
   it('tells admins about a new volunteer, and the volunteer when approved or suspended', async () => {
-    const reg = await request(app).post('/api/auth/register').send({ fullName: 'Vikram Rao', email: 'vikram@example.com', password: 'Strong@123', role: 'VOLUNTEER', acceptTerms: true });
+    const reg = await request(app).post('/api/auth/register').send({ fullName: 'Vikram Rao', email: 'vikram@example.com', password: 'Strong@123', role: 'VOLUNTEER', acceptTerms: true, phone: '9876543210' });
     await flushMail();
     expect(sentTo('vikram@example.com')[0].text).toContain('administrator reviews every volunteer account');
     const adminMail = sentTo('admin@edubridge.test')[0];
@@ -55,7 +55,7 @@ describe('email notifications', () => {
 
   it('never lets an email problem break the request', async () => {
     // A user whose email is missing from the database still gets a normal response.
-    const res = await request(app).post('/api/auth/register').send({ fullName: 'Lata Nair', email: 'lata@example.com', password: 'Strong@123', role: 'STUDENT', acceptTerms: true });
+    const res = await request(app).post('/api/auth/register').send({ fullName: 'Lata Nair', email: 'lata@example.com', password: 'Strong@123', role: 'STUDENT', acceptTerms: true, phone: '9876543210' });
     expect(res.status).toBe(201);
     await User.deleteOne({ email: 'lata@example.com' });
     await flushMail();

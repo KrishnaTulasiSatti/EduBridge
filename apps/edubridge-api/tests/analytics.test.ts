@@ -57,6 +57,7 @@ beforeAll(async () => {
     ['MARKSHEET', {}],
     ['INCOME_CERTIFICATE', { certificateNumber: 'IC2026-0012345', aadhaarNumber: '234567890124' }],
     ['COLLEGE_ID', { rollNumber: '21TEST0042' }],
+    ['FEE_RECEIPT', { receiptAmount: '65000' }],
   ] as const) {
     const r = request(app).post('/api/applications/current/documents').set('Authorization', student).field('type', type);
     for (const [k, v] of Object.entries(extra)) r.field(k, v);
@@ -84,7 +85,7 @@ describe('analytics dashboard', () => {
     const a = res.body;
     expect(a.users.students).toBeGreaterThanOrEqual(1);
     expect(a.applications).toMatchObject({ submitted: 1, awaitingVerification: 1, approved: 0, rejected: 0 });
-    expect(a.documents.awaitingReview).toBe(3);
+    expect(a.documents.awaitingReview).toBe(4);
     expect(a.trend).toHaveLength(12);
     expect(a.trend.at(-1).submitted).toBe(1);
     expect(a.sponsorship).toMatchObject({ eligibleStudents: 0, remainingAmount: 0 });
@@ -216,7 +217,7 @@ describe('document retention', () => {
       { $set: { status: 'REJECTED', decision: { decision: 'REJECTED', needLevel: 'LOW', reason: 'Test', by: (await User.findOne({ role: 'ADMIN' }))!._id, at: new Date('2020-01-01') } } },
     );
     const first = await purgeExpiredDocuments();
-    expect(first).toEqual({ applications: 1, files: 3 });
+    expect(first).toEqual({ applications: 1, files: 4 });
     const docs = await StudentDocument.find({ application: appId });
     expect(docs.every((d) => d.purgedAt && d.sha256)).toBe(true);
 

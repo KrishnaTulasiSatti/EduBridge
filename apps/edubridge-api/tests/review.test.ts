@@ -53,6 +53,7 @@ beforeAll(async () => {
     ['MARKSHEET', {}],
     ['INCOME_CERTIFICATE', { certificateNumber: 'IC2026-0012345', aadhaarNumber: '234567890124' }],
     ['COLLEGE_ID', { rollNumber: '21TEST0042' }],
+    ['FEE_RECEIPT', { receiptAmount: '65000' }],
   ] as const) {
     const r = request(app).post('/api/applications/current/documents').set('Authorization', student).field('type', type);
     for (const [k, v] of Object.entries(extra)) r.field(k, v);
@@ -70,6 +71,9 @@ beforeAll(async () => {
   });
   await request(app).post(`/api/verification/applications/${appId}/documents/${docs.MARKSHEET}/review`).set('Authorization', volunteer).send({
     type: 'MARKSHEET', outcome: 'VERIFIED', note: 'Looks genuine.', nameOnDocument: 'Rahul Kumar', percentage: 81.5,
+  });
+  await request(app).post(`/api/verification/applications/${appId}/documents/${docs.FEE_RECEIPT}/review`).set('Authorization', volunteer).send({
+    type: 'FEE_RECEIPT', outcome: 'VERIFIED', note: 'Receipt is genuine.', nameOnReceipt: 'Rahul Kumar', amountOnReceipt: 65000,
   });
   const reviewed = await request(app).post(`/api/verification/applications/${appId}/review`).set('Authorization', volunteer).send({ recommendation: 'RECOMMEND', summary: 'All documents check out.' });
   expect(reviewed.status).toBe(200);
@@ -124,7 +128,7 @@ describe('admin review and decision', () => {
 
   it('lists it for admins only, highest need first', async () => {
     const q = await request(app).get('/api/review/queue?tab=awaiting').set('Authorization', admin);
-    expect(q.body.items[0]).toMatchObject({ id: appId, documentsVerified: 3, documentsTotal: 3, recommendation: 'RECOMMEND', mlPrediction: 'HIGH' });
+    expect(q.body.items[0]).toMatchObject({ id: appId, documentsVerified: 4, documentsTotal: 4, recommendation: 'RECOMMEND', mlPrediction: 'HIGH' });
     expect(q.body.counts.awaiting).toBe(1);
     expect((await request(app).get('/api/review/queue').set('Authorization', volunteer)).status).toBe(403);
     expect((await request(app).get(`/api/review/applications/${appId}`).set('Authorization', student)).status).toBe(403);
@@ -170,7 +174,7 @@ describe('admin review and decision', () => {
       decision: 'APPROVED', needLevel: 'HIGH', approvedAmount: 75000, reason: 'Verified low income; strong volunteer recommendation.', messageToStudent: 'Congratulations!',
     });
     expect(approve.status).toBe(200);
-    expect(approve.body.decision).toMatchObject({ decision: 'APPROVED', needLevel: 'HIGH', approvedAmount: 75000, by: { name: 'Ananya Rao' } });
+    expect(approve.body.decision).toMatchObject({ decision: 'APPROVED', needLevel: 'HIGH', approvedAmount: 75000, by: { name: 'Admin' } });
     expect(approve.body.canDecide).toBe(false);
 
     // The Aadhaar number is deleted once the decision is final; the last 4 digits remain for reference.

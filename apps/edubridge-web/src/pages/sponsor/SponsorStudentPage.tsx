@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  DOCUMENT_TYPES,
   EDUCATION_LEVEL_LABELS,
   MIN_SUPPORT,
   NEED_LEVEL_LABELS,
@@ -92,7 +91,7 @@ export default function SponsorStudentPage() {
           </Card>
 
           <Card>
-            <CardHeader title="About this student" description="Only what the student agreed to share with sponsors." />
+            <CardHeader title="About this student" description="The anonymised profile shown to sponsors." />
             <CardBody className="space-y-6">
               <DefinitionList
                 items={[
@@ -100,7 +99,7 @@ export default function SponsorStudentPage() {
                   ['Year', yearOf(s)],
                   ['State', s.state],
                   ['Last exam', s.lastExamPercentage !== undefined ? `${s.lastExamPercentage}%` : undefined],
-                  ['Documents verified', `${s.verifiedDocuments} of ${DOCUMENT_TYPES.length}`],
+                  ['Documents verified', `${s.verifiedDocuments} of ${s.totalDocuments}`],
                   [
                     'Circumstances',
                     s.circumstances.length ? s.circumstances.map((c) => SPECIAL_CIRCUMSTANCE_LABELS[c]).join(', ') : <span className="text-subtle">None stated</span>,

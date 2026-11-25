@@ -86,7 +86,7 @@ export default function DiscoverPage() {
     <>
       <PageHeader
         title="Find students"
-        description="Approved students whose documents have been verified and who agreed to be shown. Profiles are anonymised: no names, contact details or documents."
+        description="Approved students whose documents have been verified. Profiles are anonymised: no names, contact details or documents."
         meta={data ? <span>{formatINR(data.available)} of your budget available</span> : undefined}
       />
 

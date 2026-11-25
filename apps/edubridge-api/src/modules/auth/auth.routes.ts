@@ -77,7 +77,7 @@ authRouter.post('/refresh', async (req, res) => {
 });
 
 authRouter.post('/logout', async (req, res) => {
-  await authService.logout(req.cookies?.[REFRESH_COOKIE], req);
+  await authService.logout(req.cookies?.[REFRESH_COOKIE]);
   clearRefreshCookie(res);
   res.status(204).end();
 });

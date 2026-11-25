@@ -22,7 +22,8 @@ import {
   type SponsorshipDTO,
   type SponsorshipOverviewDTO,
   type SponsorshipStatus,
-  type SponsorVisibilityInput,
+  requiredDocumentTypes,
+  type SponsorNoteInput,
   type StudentFundingDTO,
 } from '@edubridge/shared';
 import { env } from '../../config/env';
@@ -155,9 +156,8 @@ async function requireProfile(userId: string) {
 
 /* ----------------------------------------------------- Discovery */
 
-const SPONSOR_APP_FIELDS = 'status academicYear decision funding sponsorVisibility profileSnapshot family.circumstances support.expenses';
-/** Students are listed only after agreeing to share contact details with sponsors who connect. */
-const LISTED = { 'sponsorVisibility.visible': true, 'sponsorVisibility.shareContact': true };
+const SPONSOR_APP_FIELDS = 'status academicYear submittedAt decision funding sponsorVisibility profileSnapshot family.circumstances support.expenses';
+
 
 type LeanApp = Plain & {
   _id: Types.ObjectId;
@@ -169,6 +169,7 @@ type LeanApp = Plain & {
   profileSnapshot?: { personal?: { state?: string }; education?: Plain };
   family?: { circumstances?: SpecialCircumstance[] };
   support?: { expenses?: Partial<Record<ExpenseKey, number>> };
+  submittedAt?: Date;
 };
 
 async function verifiedCounts(ids: Types.ObjectId[]) {
@@ -203,6 +204,7 @@ function toCard(a: LeanApp, profile: { levels: string[]; categories: string[]; s
     remaining: m.remaining,
     noteToSponsors: a.sponsorVisibility?.noteToSponsors || undefined,
     verifiedDocuments: verified,
+    totalDocuments: requiredDocumentTypes(a.submittedAt).length,
     approvedAt: a.decision!.at.toISOString(),
     match: matchScore(
       profile as Parameters<typeof matchScore>[0],
@@ -223,12 +225,12 @@ const discoverQuery = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(12),
 });
 
-/** Approved students who agreed to be shown, still needing support, ranked for this sponsor. */
+/** Approved students still needing support, ranked for this sponsor. Approval is enough to be listed. */
 export async function discover(user: Actor, query: unknown) {
   const q = discoverQuery.parse(query);
   const p = await requireProfile(user.id);
   const available = Math.max(0, p.budget - p.committed);
-  const filter: Plain = { status: { $in: OPEN }, ...LISTED };
+  const filter: Plain = { status: { $in: OPEN } };
   if (q.level) filter['profileSnapshot.education.level'] = q.level;
   if (q.need) filter['decision.needLevel'] = q.need;
 
@@ -259,7 +261,7 @@ export async function discover(user: Actor, query: unknown) {
 export async function studentForSponsor(user: Actor, id: string) {
   if (!isObjectId(id)) throw AppError.notFound('Student not found');
   const p = await requireProfile(user.id);
-  const a = (await Application.findOne({ _id: id, status: { $in: APPROVED }, ...LISTED })
+  const a = (await Application.findOne({ _id: id, status: { $in: APPROVED } })
     .select(SPONSOR_APP_FIELDS)
     .lean()) as unknown as LeanApp | null;
   // A connected sponsor may still open the profile after the student hides it.
@@ -334,7 +336,7 @@ async function toDTOs(list: SponsorshipDoc[] | Plain[], viewer: Viewer): Promise
 export async function connect(user: Actor, applicationId: string, input: ConnectInput, req: Request) {
   if (!isObjectId(applicationId)) throw AppError.notFound('Student not found');
   const profile = await requireProfile(user.id);
-  const app = await Application.findOne({ _id: applicationId, status: { $in: OPEN }, ...LISTED });
+  const app = await Application.findOne({ _id: applicationId, status: { $in: OPEN } });
   if (!app) throw AppError.notFound('This student is not available for sponsorship');
 
   const { remaining } = amounts(app);
@@ -360,7 +362,6 @@ export async function connect(user: Actor, applicationId: string, input: Connect
         {
           _id: app._id,
           status: { $in: OPEN },
-          ...LISTED,
           $expr: { $lte: [{ $add: [{ $ifNull: ['$funding.promised', 0] }, amount] }, { $ifNull: ['$decision.approvedAmount', 0] }] },
         },
         { $inc: { 'funding.promised': amount } },
@@ -501,7 +502,7 @@ export async function adminList(query: unknown) {
 export async function overview(): Promise<SponsorshipOverviewDTO> {
   const [byStatus, approved, sponsors] = await Promise.all([
     Sponsorship.aggregate<{ _id: SponsorshipStatus; n: number; amount: number }>([{ $group: { _id: '$status', n: { $sum: 1 }, amount: { $sum: '$amount' } } }]),
-    Application.find({ status: { $in: APPROVED } }).select('status decision.approvedAmount funding sponsorVisibility').lean(),
+    Application.find({ status: { $in: APPROVED } }).select('status decision.approvedAmount funding').lean(),
     SponsorProfile.countDocuments(),
   ]);
   const get = (s: SponsorshipStatus) => byStatus.find((b) => b._id === s);
@@ -510,7 +511,7 @@ export async function overview(): Promise<SponsorshipOverviewDTO> {
       promised: get('CONNECTED')?.amount ?? 0,
       remaining: approved.reduce((sum, a) => sum + amounts(a).remaining, 0),
       eligibleStudents: approved.filter((a) => a.status !== 'FULLY_FUNDED').length,
-      visibleStudents: approved.filter((a) => a.status !== 'FULLY_FUNDED' && a.sponsorVisibility?.visible && a.sponsorVisibility?.shareContact).length,
+      visibleStudents: approved.filter((a) => a.status !== 'FULLY_FUNDED').length,
       fullySupported: approved.filter((a) => a.status === 'FULLY_FUNDED').length,
       sponsors,
     },
@@ -529,44 +530,28 @@ export async function studentFunding(user: Actor): Promise<StudentFundingDTO> {
   if (!app) return { eligible: false, status: 'NONE', approvedAmount: 0, promised: 0, remaining: 0, visible: false, sponsorships: [] };
   const m = amounts(app);
   const list = await Sponsorship.find({ application: app._id }).sort({ status: 1, createdAt: -1 }).lean();
-  const vis = app.sponsorVisibility;
-  const listed = !!vis?.visible && !!vis?.shareContact;
+  const eligible = APPROVED.includes(app.status as ApplicationStatus);
   return {
-    eligible: APPROVED.includes(app.status as ApplicationStatus),
+    eligible,
     status: app.status,
     approvedAmount: m.approved,
     promised: m.promised,
     remaining: m.remaining,
-    visible: listed,
-    visibleSince: listed ? vis!.at.toISOString() : undefined,
-    noteToSponsors: vis?.noteToSponsors || undefined,
-    needsNewConsent: !!vis?.visible && !vis?.shareContact,
+    // Approved students are shown to sponsors straight away; they agreed to this in the terms at sign-up.
+    visible: eligible && app.status !== 'FULLY_FUNDED',
+    noteToSponsors: app.sponsorVisibility?.noteToSponsors || undefined,
     alias: APPROVED.includes(app.status as ApplicationStatus) ? studentAlias(app._id) : undefined,
     sponsorships: await toDTOs(list, 'STUDENT'),
   };
 }
 
-export async function setVisibility(user: Actor, input: SponsorVisibilityInput, req: Request) {
+/** The student's optional note, shown to sponsors on their anonymised profile. */
+export async function setNote(user: Actor, input: SponsorNoteInput) {
   const app = await latestApplication(user.id);
   if (!app || !APPROVED.includes(app.status as ApplicationStatus)) {
-    throw AppError.conflict('Your profile can be shown to sponsors once your application is approved');
+    throw AppError.conflict('You can write a note to sponsors once your application is approved');
   }
-  const before = !!app.sponsorVisibility?.visible && !!app.sponsorVisibility?.shareContact;
-  app.set('sponsorVisibility', {
-    visible: input.visible,
-    shareContact: input.visible ? true : undefined,
-    at: new Date(),
-    noteToSponsors: input.noteToSponsors || undefined,
-  });
+  app.set('sponsorVisibility.noteToSponsors', input.noteToSponsors || undefined);
   await app.save();
-  await audit({
-    actorId: user.id,
-    actorRole: user.role,
-    action: AUDIT_ACTIONS.SPONSOR_VISIBILITY_CHANGED,
-    resourceType: 'Application',
-    resourceId: app.id,
-    metadata: { applicationNumber: app.applicationNumber, from: before, to: input.visible, sharesContact: input.visible, note: !!input.noteToSponsors },
-    req,
-  });
   return studentFunding(user);
 }

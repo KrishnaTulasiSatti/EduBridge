@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { IdleSignOut } from '@/components/layout/IdleSignOut';
@@ -16,7 +16,6 @@ const DashboardHome = lazy(() => import('@/pages/dashboard/DashboardHome'));
 const UsersPage = lazy(() => import('@/pages/dashboard/UsersPage'));
 const ComingSoon = lazy(() => import('@/pages/dashboard/ComingSoon'));
 const ApplicationPage = lazy(() => import('@/pages/student/ApplicationPage'));
-const DocumentsPage = lazy(() => import('@/pages/student/DocumentsPage'));
 const ProfilePage = lazy(() => import('@/pages/student/ProfilePage'));
 const EduVaultCallback = lazy(() => import('@/pages/student/EduVaultCallback'));
 const ApplicationsPage = lazy(() => import('@/pages/admin/ApplicationsPage'));
@@ -34,6 +33,7 @@ const MySponsorshipsPage = lazy(() => import('@/pages/sponsor/MySponsorshipsPage
 const AnalyticsPage = lazy(() => import('@/pages/admin/AnalyticsPage'));
 const AuditLogPage = lazy(() => import('@/pages/admin/AuditLogPage'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
+const TermsPage = lazy(() => import('@/pages/TermsPage'));
 
 // Pages that are not built yet render a placeholder.
 const placeholderPaths = [
@@ -50,14 +50,18 @@ function ThemedToaster() {
   return (
     <Toaster
       theme={theme}
-      position="top-center"
+      position="top-right"
+      offset={20}
+      gap={10}
+      closeButton
       toastOptions={{
         style: {
-          borderRadius: 10,
+          borderRadius: 12,
           background: 'var(--surface)',
           color: 'var(--foreground)',
           border: '1px solid var(--border)',
           fontFamily: 'var(--font-sans)',
+          boxShadow: 'var(--shadow-pop)',
         },
       }}
     />
@@ -84,13 +88,14 @@ export default function App() {
           <Suspense fallback={<FullPageLoader />}>
             <Routes>
               <Route path="/" element={<LandingPage />} />
+              <Route path="/terms" element={<TermsPage />} />
               <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
               <Route path="/register" element={<GuestRoute><RegisterPage /></GuestRoute>} />
 
               <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
                 <Route index element={<DashboardHome />} />
                 <Route path="application" element={<ProtectedRoute roles={[...student]}><ApplicationPage /></ProtectedRoute>} />
-                <Route path="documents" element={<ProtectedRoute roles={[...student]}><DocumentsPage /></ProtectedRoute>} />
+                <Route path="documents" element={<Navigate to="/dashboard/application?step=documents" replace />} />
                 <Route path="profile" element={<ProtectedRoute roles={[...student]}><ProfilePage /></ProtectedRoute>} />
                 <Route path="eduvault/callback" element={<ProtectedRoute roles={[...student]}><EduVaultCallback /></ProtectedRoute>} />
                 <Route path="applications" element={<ProtectedRoute roles={['ADMIN']}><ApplicationsPage /></ProtectedRoute>} />
@@ -114,7 +119,7 @@ export default function App() {
                   path="verification"
                   element={
                     <ProtectedRoute roles={['ADMIN']}>
-                      <QueuePage key="verification" title="Verification" description="Document verification across every application. Admins can also verify applications themselves." scopes={['all', 'available', 'mine', 'reviewed']} />
+                      <QueuePage key="verification" title="Verification" scopes={['all', 'available', 'mine', 'reviewed']} />
                     </ProtectedRoute>
                   }
                 />

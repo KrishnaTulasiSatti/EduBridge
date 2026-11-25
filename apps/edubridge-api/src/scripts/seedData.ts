@@ -9,6 +9,13 @@ import { User } from '../modules/auth/user.model';
 export const ADMIN_EMAIL = process.env.ADMIN_EMAIL?.trim() || 'admin@edubridge.test';
 export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Demo@1234';
 
+export const ADMIN_NAME = 'Admin';
+
+/** Older builds gave the administrator a person's name. Show it simply as "Admin". */
+export async function renameDefaultAdmin() {
+  await User.updateMany({ role: 'ADMIN', fullName: { $in: ['Ananya Rao', 'EduBridge Administrator'] } }, { $set: { fullName: ADMIN_NAME } });
+}
+
 /** Creates the administrator if it does not exist yet. An existing account (and its password) is never changed. */
 export async function seedAdmin() {
   if (process.env.NODE_ENV === 'production' && !process.env.ADMIN_PASSWORD) {
@@ -19,7 +26,7 @@ export async function seedAdmin() {
     {
       $setOnInsert: {
         email: ADMIN_EMAIL,
-        fullName: 'EduBridge Administrator',
+        fullName: ADMIN_NAME,
         role: 'ADMIN',
         status: 'ACTIVE',
         passwordHash: await hashPassword(ADMIN_PASSWORD),

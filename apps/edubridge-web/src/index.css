@@ -3,33 +3,33 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * EduBridge design tokens — calm, warm and quiet.
- * Paper-white surfaces, ink text, a single pine-green accent, thin borders, no gradients.
+ * EduBridge design tokens — calm and quiet.
+ * Light: clean white cards on a soft cool-grey page. Dark: deep green-grey. One pine-green accent, thin borders, no gradients.
  */
 :root {
-  --background: #f7f6f2;
+  --background: #f4f6f8;
   --surface: #ffffff;
-  --surface-sunken: #f1efe9;
-  --foreground: #1d211f;
-  --muted-foreground: #646a66;
-  --subtle-foreground: #8b908c;
-  --border: #e5e2da;
-  --border-strong: #d6d2c8;
+  --surface-sunken: #eef1f4;
+  --foreground: #111827;
+  --muted-foreground: #4b5563;
+  --subtle-foreground: #6b7280;
+  --border: #e2e6ea;
+  --border-strong: #cfd5dc;
 
   --primary: #2f5d50;
-  --primary-hover: #284f44;
+  --primary-hover: #264d42;
   --primary-foreground: #ffffff;
-  --primary-soft: #e8efeb;
-  --primary-ink: #234a3f;
+  --primary-soft: #e6f0ec;
+  --primary-ink: #1f4a3e;
 
-  --success: #3f7a55;
-  --success-soft: #e6f0e9;
-  --warning: #9a6a1f;
-  --warning-soft: #f6eedf;
-  --danger: #a5402d;
-  --danger-soft: #f7e7e3;
-  --info: #3d5f8a;
-  --info-soft: #e7edf5;
+  --success: #2f7a4f;
+  --success-soft: #e5f3ea;
+  --warning: #92610f;
+  --warning-soft: #fbf1df;
+  --danger: #b03a2e;
+  --danger-soft: #fbe9e7;
+  --info: #2f5f93;
+  --info-soft: #e7eef8;
 
   --ring: #2f5d50;
 
@@ -100,8 +100,8 @@
   --color-chart: var(--chart);
   --color-chart-track: var(--chart-track);
 
-  --shadow-card: 0 1px 2px rgb(29 33 31 / 0.04);
-  --shadow-pop: 0 8px 24px -8px rgb(29 33 31 / 0.16), 0 2px 6px rgb(29 33 31 / 0.06);
+  --shadow-card: 0 1px 2px rgb(17 24 39 / 0.05), 0 1px 1px rgb(17 24 39 / 0.03);
+  --shadow-pop: 0 10px 28px -10px rgb(17 24 39 / 0.18), 0 2px 6px rgb(17 24 39 / 0.06);
 }
 
 @layer base {
@@ -434,5 +434,52 @@ details[open] > :not(summary) {
   .reveal {
     opacity: 1;
     transform: none;
+  }
+}
+
+/*
+ * Toasts: slide in from the top-right edge towards the left, and slide back out the same way.
+ * Each type gets a thin coloured edge so success and error are easy to tell apart.
+ */
+[data-sonner-toaster][data-x-position='right'] [data-sonner-toast] {
+  transition:
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.35s ease,
+    height 0.4s ease,
+    box-shadow 0.2s;
+}
+[data-sonner-toaster][data-x-position='right'] [data-sonner-toast][data-mounted='false'] {
+  --y: translateX(calc(100% + 32px));
+}
+[data-sonner-toaster][data-x-position='right'] [data-sonner-toast][data-removed='true'][data-front='true'][data-swipe-out='false'] {
+  --y: translateX(calc(100% + 32px));
+  opacity: 0;
+}
+[data-sonner-toast][data-type='success'] {
+  border-left: 3px solid var(--success) !important;
+}
+[data-sonner-toast][data-type='error'] {
+  border-left: 3px solid var(--danger) !important;
+}
+[data-sonner-toast][data-type='warning'] {
+  border-left: 3px solid var(--warning) !important;
+}
+[data-sonner-toast][data-type='info'] {
+  border-left: 3px solid var(--info) !important;
+}
+[data-sonner-toast][data-type='success'] [data-icon] {
+  color: var(--success);
+}
+[data-sonner-toast][data-type='error'] [data-icon] {
+  color: var(--danger);
+}
+[data-sonner-toast] [data-close-button] {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+  color: var(--muted-foreground) !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-sonner-toaster] [data-sonner-toast] {
+    transition: opacity 0.2s ease !important;
   }
 }

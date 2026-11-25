@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FieldValues, UseFormReturn } from 'react-hook-form';
 import {
-  DOCUMENT_TYPES,
+  requiredDocumentTypes,
   educationSchema,
   familySchema,
   personalSchema,
@@ -20,7 +20,7 @@ export const studentApi = {
     return (await api.get<{ profile: StudentProfileDTO }>('/profile/me')).data.profile;
   },
   async saveProfile(body: { personal?: unknown; education?: unknown }) {
-    return (await api.patch<{ profile: StudentProfileDTO; rejected: string[] }>('/profile/me', body)).data.profile;
+    return (await api.patch<{ profile: StudentProfileDTO; rejected: string[] }>('/profile/me', body, { silent: true })).data.profile;
   },
   async application() {
     return (await api.get<{ application: ApplicationDTO | null }>('/applications/current')).data.application;
@@ -29,7 +29,7 @@ export const studentApi = {
     return (await api.post<{ application: ApplicationDTO }>('/applications/current')).data.application;
   },
   async saveApplication(body: { family?: unknown; support?: unknown }) {
-    return (await api.patch<{ application: ApplicationDTO; rejected: string[] }>('/applications/current', body)).data.application;
+    return (await api.patch<{ application: ApplicationDTO; rejected: string[] }>('/applications/current', body, { silent: true })).data.application;
   },
   async upload(type: DocumentType, file: File, extra: Record<string, string>, onProgress?: (pct: number) => void) {
     const form = new FormData();
@@ -130,7 +130,7 @@ export function sectionCompletion(profile: StudentProfileDTO | null, application
     education: ok(educationSchema, profile?.education),
     family: ok(familySchema, application?.family),
     support: ok(supportSchema, application?.support),
-    documents: DOCUMENT_TYPES.every((t) => docs.some((d) => d.type === t)),
+    documents: requiredDocumentTypes(application?.submittedAt).every((t) => docs.some((d) => d.type === t)),
   } satisfies Record<SectionId, boolean>;
 }
 

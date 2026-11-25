@@ -87,11 +87,15 @@ export const AUDIT_CATEGORY_LABELS: Record<AuditCategory, string> = {
   PLATFORM: 'Platform',
 };
 
+/**
+ * Routine sign-ins and sign-outs are no longer recorded; the log keeps the verification flow and security events.
+ * Entries from older builds stay in the database (the log is append-only) but are left out of every view.
+ */
+export const UNLISTED_AUDIT_ACTIONS = ['LOGIN_SUCCESS', 'LOGOUT'] as const;
+
 /** Every audited action: a short title, the phrase used in activity sentences, and its category. */
 export const AUDIT_ACTION_INFO: Record<string, { title: string; phrase: string; category: AuditCategory }> = {
   USER_REGISTERED: { title: 'Account created', phrase: 'created an account', category: 'ACCOUNTS' },
-  LOGIN_SUCCESS: { title: 'Signed in', phrase: 'signed in', category: 'ACCOUNTS' },
-  LOGOUT: { title: 'Signed out', phrase: 'signed out', category: 'ACCOUNTS' },
   USER_STATUS_CHANGED: { title: 'Account status changed', phrase: 'changed an account status', category: 'ACCOUNTS' },
   PROFILE_UPDATED: { title: 'Profile updated', phrase: 'updated a profile', category: 'ACCOUNTS' },
   SPONSOR_PAN_OTP_SENT: { title: 'Sponsor PAN code sent', phrase: 'requested a PAN verification code', category: 'ACCOUNTS' },

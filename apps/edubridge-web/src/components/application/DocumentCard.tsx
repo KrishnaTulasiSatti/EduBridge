@@ -6,6 +6,7 @@ import {
   aadhaarError,
   ALLOWED_UPLOAD_TYPES,
   DOCUMENT_TYPE_LABELS,
+  feeReceiptProblem,
   maskAadhaar,
   MAX_UPLOAD_BYTES,
   type ApplicationDTO,
@@ -17,29 +18,28 @@ import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/input';
 import { getErrorMessage, getFieldErrors } from '@/lib/api';
 import { formatBytes, formatDate, openDocument, studentApi, vaultReturn } from '@/lib/student';
-import { cn } from '@/lib/utils';
+import { cn, formatINR } from '@/lib/utils';
 import { DocumentStatusBadge } from './status';
 import { VaultVerificationSummary } from './VaultVerification';
 
 export const DOCUMENT_INFO: Record<
   DocumentType,
-  { description: string; verification: string; extra?: { key: 'certificateNumber' | 'rollNumber'; label: string; hint: string } }
+  { description: string; extra?: { key: 'certificateNumber' | 'rollNumber' | 'receiptAmount'; label: string; hint: string } }
 > = {
   MARKSHEET: {
     description: 'Your most recent semester or year-end marksheet.',
-    verification:
-      'A marksheet shared from EduVault is checked automatically against your institution’s digital signature. An uploaded copy is checked by a reviewer.',
   },
   INCOME_CERTIFICATE: {
     description: 'Family income certificate issued by the revenue department.',
-    verification:
-      'A volunteer finds your certificate on the official AP Seva portal using your Aadhaar number and checks it against your application.',
     extra: { key: 'certificateNumber', label: 'Certificate or application number', hint: 'Printed on your income certificate' },
   },
   COLLEGE_ID: {
     description: 'The front side of your current college identity card.',
-    verification: 'Your enrolment is checked against your college’s records on EduVault, or confirmed with the college directly.',
     extra: { key: 'rollNumber', label: 'Roll number on your ID card', hint: 'As printed on the card' },
+  },
+  FEE_RECEIPT: {
+    description: 'Your latest college fee receipt. The amount must match the tuition fee you entered.',
+    extra: { key: 'receiptAmount', label: 'Amount on the receipt', hint: 'In whole rupees, as printed on the receipt' },
   },
 };
 
@@ -84,13 +84,14 @@ export function DocumentCard({
   type,
   doc,
   editable,
-  defaultRollNumber,
+  tuitionFee,
   onChange,
 }: {
   type: DocumentType;
   doc?: DocumentDTO;
   editable: boolean;
-  defaultRollNumber?: string;
+  /** Fee receipt: the tuition fee from "Support needed", which the receipt amount must equal. */
+  tuitionFee?: number;
   onChange?: (app: ApplicationDTO) => void;
 }) {
   const info = DOCUMENT_INFO[type];
@@ -99,9 +100,8 @@ export function DocumentCard({
   const [progress, setProgress] = useState<number | null>(null);
   const [removing, setRemoving] = useState(false);
   const [dragOver, setDragOver] = useState(false);
-  const [extraValue, setExtraValue] = useState(
-    (info.extra && doc?.[info.extra.key]) ?? (info.extra?.key === 'rollNumber' ? defaultRollNumber ?? '' : ''),
-  );
+  const isAmount = info.extra?.key === 'receiptAmount';
+  const [extraValue, setExtraValue] = useState(String((info.extra && doc?.[info.extra.key]) ?? ''));
   const [extraError, setExtraError] = useState<string | undefined>();
   const [aadhaar, setAadhaar] = useState('');
   const [aadhaarErr, setAadhaarErr] = useState<string | undefined>();
@@ -124,6 +124,13 @@ export function DocumentCard({
     if (info.extra && !extraValue.trim()) {
       setExtraError(`Enter the ${info.extra.label.toLowerCase()} first`);
       return;
+    }
+    if (isAmount) {
+      const problem = feeReceiptProblem(Number(extraValue), tuitionFee);
+      if (problem) {
+        setExtraError(problem);
+        return;
+      }
     }
     const fields: Record<string, string> = info.extra ? { [info.extra.key]: extraValue.trim() } : {};
     if (needsAadhaar) {
@@ -216,6 +223,7 @@ export function DocumentCard({
                   {formatBytes(doc.size)} · Uploaded {formatDate(doc.uploadedAt)}
                   {doc.certificateNumber && ` · No. ${doc.certificateNumber}`}
                   {doc.rollNumber && ` · Roll no. ${doc.rollNumber}`}
+                  {doc.receiptAmount !== undefined && ` · ${formatINR(doc.receiptAmount)}`}
                   {doc.aadhaarLast4 && ` · Aadhaar ${maskAadhaar(doc.aadhaarLast4)}`}
                 </p>
               </div>
@@ -254,8 +262,9 @@ export function DocumentCard({
                       id={`${type}-extra`}
                       value={extraValue}
                       invalid={!!extraError}
+                      {...(isAmount ? { inputMode: 'numeric' as const, prefix: '₹', autoComplete: 'off' } : {})}
                       onChange={(e) => {
-                        setExtraValue(e.target.value);
+                        setExtraValue(isAmount ? e.target.value.replace(/\D/g, '') : e.target.value);
                         setExtraError(undefined);
                       }}
                     />
@@ -341,7 +350,6 @@ export function DocumentCard({
         )}
 
         {error && <p className="text-[13px] text-danger">{error}</p>}
-        <p className="text-[13px] leading-relaxed text-subtle">{info.verification}</p>
       </div>
     </div>
   );

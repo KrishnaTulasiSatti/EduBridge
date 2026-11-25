@@ -1,7 +1,7 @@
 import { Router, type Request } from 'express';
 import { Types } from 'mongoose';
 import { z } from 'zod';
-import { AUDIT_ACTION_INFO, AUDIT_CATEGORIES, ROLES, auditActionsIn, auditTitle, type AuditEntryDTO } from '@edubridge/shared';
+import { AUDIT_ACTION_INFO, AUDIT_CATEGORIES, ROLES, auditActionsIn, auditTitle, UNLISTED_AUDIT_ACTIONS, type AuditEntryDTO } from '@edubridge/shared';
 import { authenticate, requireRole } from '../../middleware/auth';
 import { AppError } from '../../utils/AppError';
 import { User } from '../auth/user.model';
@@ -39,7 +39,7 @@ const listQuery = filterQuery.extend({
 const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 async function buildFilter(q: z.infer<typeof filterQuery>) {
-  const and: Record<string, unknown>[] = [];
+  const and: Record<string, unknown>[] = [{ action: { $nin: UNLISTED_AUDIT_ACTIONS } }];
   if (q.action) and.push({ action: q.action });
   else if (q.category) and.push({ action: { $in: auditActionsIn(q.category) } });
   if (q.role) and.push({ actorRole: q.role });
@@ -153,7 +153,7 @@ auditRouter.get('/:id', async (req, res) => {
   if (!entry) throw AppError.notFound('Audit entry not found');
   // Other entries about the same resource, so an admin can follow what happened to it.
   const related = entry.resourceId
-    ? await AuditLog.find({ resourceId: entry.resourceId, _id: { $ne: entry._id } })
+    ? await AuditLog.find({ resourceId: entry.resourceId, _id: { $ne: entry._id }, action: { $nin: UNLISTED_AUDIT_ACTIONS } })
         .sort({ createdAt: -1 })
         .limit(20)
         .populate('actor', 'fullName email')
