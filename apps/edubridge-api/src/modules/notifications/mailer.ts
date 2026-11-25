@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { env } from '../../config/env';
+import { sendWithBrevo } from './brevo';
 
 export interface Mail {
   to: string;
@@ -27,12 +28,17 @@ async function deliver(mail: Mail) {
     testOutbox.push(mail);
     return;
   }
+  const from = env.MAIL_FROM || `EduBridge <${env.SMTP_USER}>`;
+  if (env.BREVO_API_KEY) {
+    await sendWithBrevo(env.BREVO_API_KEY, from, mail);
+    return;
+  }
   if (!transport) {
     // Development without SMTP settings: show the email in the console instead.
     console.log(`\n📧 [email not configured] To: ${mail.to}\n   Subject: ${mail.subject}\n${mail.text.replace(/^/gm, '   ')}\n`);
     return;
   }
-  await transport.sendMail({ from: env.MAIL_FROM || `EduBridge <${env.SMTP_USER}>`, ...mail });
+  await transport.sendMail({ from, ...mail });
 }
 
 /**

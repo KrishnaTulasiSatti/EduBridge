@@ -31,6 +31,8 @@ const envSchema = z.object({
   SMTP_USER: z.string().optional().default(''),
   SMTP_PASS: z.string().optional().default(''),
   MAIL_FROM: z.string().optional().default(''),
+  /** Brevo API key. When set, email goes through Brevo over HTTPS instead of SMTP (needed on hosts that block SMTP). */
+  BREVO_API_KEY: z.string().optional().default(''),
 });
 
 const testDefaults = isTest

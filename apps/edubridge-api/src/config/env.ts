@@ -34,6 +34,8 @@ const envSchema = z.object({
   SMTP_PASS: z.string().optional().default(''),
   /** Sender shown in the inbox, e.g. "EduBridge <yourname@gmail.com>". Defaults to SMTP_USER. */
   MAIL_FROM: z.string().optional().default(''),
+  /** Brevo API key. When set, email goes through Brevo over HTTPS instead of SMTP (needed on hosts that block SMTP). */
+  BREVO_API_KEY: z.string().optional().default(''),
   /** The website address used in email links. Defaults to the first CLIENT_ORIGIN. */
   APP_URL: z.string().optional().default(''),
 });
@@ -60,8 +62,11 @@ if (parsed.data.NODE_ENV === 'production' && !parsed.data.MONGODB_URI) {
   process.exit(1);
 }
 
-if (parsed.data.NODE_ENV === 'production' && !parsed.data.SMTP_HOST) {
-  console.warn('⚠️  SMTP_HOST is not set: email notifications will not be sent');
+if (parsed.data.NODE_ENV === 'production' && !parsed.data.SMTP_HOST && !parsed.data.BREVO_API_KEY) {
+  console.warn('⚠️  Neither BREVO_API_KEY nor SMTP_HOST is set: email notifications will not be sent');
+}
+if (parsed.data.BREVO_API_KEY && !parsed.data.MAIL_FROM) {
+  console.warn('⚠️  BREVO_API_KEY is set but MAIL_FROM is empty: set MAIL_FROM to a sender verified in Brevo');
 }
 
 export const env = parsed.data;

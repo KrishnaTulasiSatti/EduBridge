@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { env, webOrigin } from '../../config/env';
+import { sendWithBrevo } from './brevo';
 
 export interface Mail {
   to: string;
@@ -28,6 +29,15 @@ export async function sendMail(mail: Mail): Promise<boolean> {
   if (env.NODE_ENV === 'test') {
     testOutbox.push(mail);
     return true;
+  }
+  if (env.BREVO_API_KEY) {
+    try {
+      await sendWithBrevo(env.BREVO_API_KEY, env.MAIL_FROM || env.SMTP_USER, mail);
+      return true;
+    } catch (e) {
+      console.error(`Email to ${mail.to} failed:`, e instanceof Error ? e.message : e);
+      return false;
+    }
   }
   if (!transport) {
     console.log(`\n📧 [EduVault · email not configured] To: ${mail.to}\n   ${mail.subject}\n${mail.text.replace(/^/gm, '   ')}\n`);

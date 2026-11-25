@@ -23,6 +23,8 @@ const envSchema = z.object({
   SMTP_USER: z.string().optional().default(''),
   SMTP_PASS: z.string().optional().default(''),
   MAIL_FROM: z.string().optional().default(''),
+  /** Brevo API key. When set, email goes through Brevo over HTTPS instead of SMTP (needed on hosts that block SMTP). */
+  BREVO_API_KEY: z.string().optional().default(''),
 });
 
 const testDefaults = isTest
@@ -41,8 +43,8 @@ if (parsed.data.NODE_ENV === 'production') {
     console.error('❌ MONGODB_URI is required in production');
     process.exit(1);
   }
-  if (!parsed.data.SMTP_HOST) {
-    console.error('❌ SMTP_HOST is required in production (one-time passwords are sent by email)');
+  if (!parsed.data.SMTP_HOST && !parsed.data.BREVO_API_KEY) {
+    console.error('❌ BREVO_API_KEY or SMTP_HOST is required in production (one-time passwords are sent by email)');
     process.exit(1);
   }
 }

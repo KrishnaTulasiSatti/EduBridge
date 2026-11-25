@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { env } from '../../config/env';
+import { sendWithBrevo } from './brevo';
 
 export interface OutgoingMail {
   to: string;
@@ -26,6 +27,10 @@ const transport = env.SMTP_HOST
 export async function sendMail(mail: OutgoingMail) {
   if (env.NODE_ENV === 'test') {
     testOutbox.push(mail);
+    return;
+  }
+  if (env.BREVO_API_KEY) {
+    await sendWithBrevo(env.BREVO_API_KEY, env.MAIL_FROM || env.SMTP_USER, mail);
     return;
   }
   if (!transport) {
